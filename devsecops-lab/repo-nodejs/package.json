@@ -1,0 +1,15 @@
+{
+  "name": "vulnerable-node-app",
+  "version": "1.0.0",
+  "description": "Vulnerable Node.js app for DevSecOps testing",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "4.17.1",
+    "lodash": "4.17.20",
+    "body-parser": "1.19.0",
+    "mysql2": "2.2.5"
+  }
+}

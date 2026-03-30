@@ -1,0 +1,62 @@
+stages:
+  - build
+  - sast
+  - sca
+  - container-scan
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE:latest
+
+cache:
+  paths:
+    - node_modules/
+
+# ==================== BUILD ====================
+build:
+  stage: build
+  image: node:14
+  script:
+    - npm install
+  artifacts:
+    paths:
+      - node_modules/
+    expire_in: 1 day
+
+# ==================== SAST (SonarQube) ====================
+sast:
+  stage: sast
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=devsecops-nodejs
+      -Dsonar.sources=.
+      -Dsonar.host.url=$SONAR_HOST_URL
+      -Dsonar.login=$SONAR_TOKEN
+  allow_failure: true
+
+# ==================== SCA (Dependency Check) ====================
+sca:
+  stage: sca
+  image: owasp/dependency-check:latest
+  script:
+    - dependency-check
+      --scan package.json
+      --format HTML
+      --out report.html
+  artifacts:
+    paths:
+      - report.html
+    expire_in: 1 week
+  allow_failure: true
+
+# ==================== CONTAINER SCANNING ====================
+container-scan:
+  stage: container-scan
+  image: aquasec/trivy:latest
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker build -t $DOCKER_IMAGE .
+    - docker push $DOCKER_IMAGE
+    - trivy image --severity HIGH,CRITICAL --format table $DOCKER_IMAGE
+  allow_failure: true
