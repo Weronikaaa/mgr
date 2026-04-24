@@ -1,49 +1,91 @@
+from flask import Flask, request
 import sqlite3
-import pickle
 import subprocess
+import pickle
+import os
+import hashlib
 
-# PODATNOŚĆ 1: SQL Injection
-def get_user(username):
-    conn = sqlite3.connect('users.db')
+app = Flask(__name__)
+
+# =========================
+# HOME
+# =========================
+@app.route("/")
+def home():
+    return """
+    <h1>Vulnerable Flask App</h1>
+    <p>Try endpoints:</p>
+    <ul>
+        <li>/user?username=admin</li>
+        <li>/ping?host=127.0.0.1</li>
+        <li>/calc?expr=2+2</li>
+    </ul>
+    """
+
+# =========================
+# SQL INJECTION
+# =========================
+@app.route("/user")
+def get_user():
+    username = request.args.get("username")
+
+    conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
+
     query = f"SELECT * FROM users WHERE username = '{username}'"
-    cursor.execute(query)  # Niebezpieczne - brak parametryzacji
-    return cursor.fetchone()
+    cursor.execute(query)  # VULNERABLE
 
-# PODATNOŚĆ 2: Command Injection
-def ping_host(host):
-    return subprocess.call(f"ping -c 1 {host}", shell=True)  # Niebezpieczne
+    return str(cursor.fetchone())
 
-# PODATNOŚĆ 3: Pickle deserialization
-def load_data(data):
-    return pickle.loads(data)  # Niebezpieczne - możliwy RCE
+# =========================
+# COMMAND INJECTION
+# =========================
+@app.route("/ping")
+def ping():
+    host = request.args.get("host")
+    return str(subprocess.call(f"ping -c 1 {host}", shell=True))
 
-# PODATNOŚĆ 4: Hardcoded secret
-API_KEY = "sk-1234567890abcdef"  # Hardcoded credential
+# =========================
+# EVAL INJECTION
+# =========================
+@app.route("/calc")
+def calc():
+    expr = request.args.get("expr")
+    return str(eval(expr))  # VULNERABLE
 
-# PODATNOŚĆ 5: Path traversal
-def read_file(filename):
-    with open(f"/var/data/{filename}", 'r') as f:  # Brak walidacji ścieżki
+# =========================
+# PICKLE RCE
+# =========================
+@app.route("/load", methods=["POST"])
+def load():
+    data = request.data
+    obj = pickle.loads(data)  # VULNERABLE
+    return str(obj)
+
+# =========================
+# DEBUG / SECRET
+# =========================
+API_KEY = "sk-test-123456"
+
+# =========================
+# WEAK HASH
+# =========================
+@app.route("/hash")
+def weak_hash():
+    password = request.args.get("password", "test")
+    return hashlib.md5(password.encode()).hexdigest()
+
+# =========================
+# FILE READ (PATH TRAVERSAL)
+# =========================
+@app.route("/file")
+def read_file():
+    filename = request.args.get("file")
+    path = f"/var/data/{filename}"
+
+    with open(path, "r") as f:
         return f.read()
 
-# PODATNOŚĆ 6: Weak hash
-import hashlib
-password_hash = hashlib.md5(b"password123").hexdigest()  # MD5
-
-# PODATNOŚĆ 7: Debug mode enabled
-DEBUG = True  # W produkcji
-
-# PODATNOŚĆ 8: eval usage
-def calculate(expression):
-    return eval(expression)  # Niebezpieczne
-
-# PODATNOŚĆ 9: Insecure redirect
-def redirect(url):
-    return f"<script>window.location='{url}'</script>"  # Open redirect
-
-# PODATNOŚĆ 10: Unencrypted sensitive data
-import os
-os.environ['DB_PASSWORD'] = 'postgres'  # Plaintext secret
-
+# =========================
 if __name__ == "__main__":
-    print("Vulnerable Python App")
+    app.run(host="0.0.0.0", port=5000)
