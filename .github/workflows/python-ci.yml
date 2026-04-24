@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Start build timer
+        run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -96,9 +98,13 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Start deploy timer
+        run: echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
       - name: Trigger Render deploy
         run: |
           curl -X POST "https://api.render.com/deploy/srv_${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}"
+      - name: End deploy timer
+        run: echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
 
 # ================= SMOKE TESTS =================
   smoke-tests:
@@ -112,3 +118,11 @@ jobs:
         run: |
           chmod +x scripts/smoke-tests.sh
           ./scripts/smoke-tests.sh https://mgr.onrender.com
+      - name: Collect metrics
+        run: python scripts/metrics-collector.py
+      - name: Upload metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics
+          path: metrics/
+        
