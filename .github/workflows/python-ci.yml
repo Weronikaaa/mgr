@@ -111,4 +111,4 @@ jobs:
       - name: Run smoke tests
         run: |
           chmod +x scripts/smoke-tests.sh
-          ./scripts/smoke-tests.sh https://cicd-4hzx.onrender.com
+          ./scripts/smoke-tests.sh https://mgr.onrender.com
