@@ -191,7 +191,7 @@ jobs:
 # Dodaj do swojego pipeline
   generate-dashboard:
     runs-on: ubuntu-latest
-    needs: metrics
+    needs: [metrics, gitleaks]  # ← DODAJ gitleaks do needs
     if: github.ref == 'refs/heads/main'
     
     steps:
@@ -200,38 +200,47 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: metrics/
+          path: artifacts/
       
-      - name: List downloaded files (debug)
+      - name: Debug - list all downloaded artifacts
         run: |
-          echo "Files in metrics directory:"
-          ls -la metrics/
+          echo "=== All downloaded files ==="
+          find artifacts/ -type f
           echo ""
-          echo "Directory structure:"
-          find metrics/ -type f
+          echo "=== Looking for gitleaks ==="
+          find artifacts/ -name "*gitleak*" -type f
+      
+      - name: Copy reports to metrics directory
+        run: |
+          mkdir -p metrics
+          # Kopiuj wszystkie raporty do metrics/
+          find artifacts/ -name "bandit-report.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "trivy-report.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "trivy-image.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "gitleaks*" -exec cp {} metrics/ \;
+          
+          echo "=== Files in metrics/ ==="
+          ls -la metrics/
       
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       
-      - name: Install plotting dependencies
-        run: |
-          pip install matplotlib pandas numpy plotly
+      - name: Install dependencies
+        run: pip install matplotlib pandas numpy plotly
       
       - name: Generate dashboard
-        run: |
-          python scripts/generate-dashboard.py
+        run: python scripts/generate-dashboard.py
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dashboard          # Twój katalog źródłowy
+          publish_dir: ./dashboard
           publish_branch: gh-pages
-          # NIE używaj destination_dir - chcesz pliki w ROOTcie
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy dashboard to root'
+          commit_message: 'Deploy dashboard'
           force_orphan: true
           keep_files: false
