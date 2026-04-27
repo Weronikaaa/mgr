@@ -122,29 +122,29 @@ def load_gitleaks_metrics():
     
     # Format 2: NOWY format Gitleaks JSON (lista bezpośrednio)
     # W funkcji load_gitleaks_metrics(), w sekcji JSON list format:
-elif isinstance(data, list):
-    print(f"Parsing Gitleaks JSON list format...")
-    leaks = data
-    print(f"Gitleaks JSON: Found {len(leaks)} secrets")
-    for leak in leaks[:5]:
-        # Pokaż więcej szczegółów
-        file_path = leak.get('File', leak.get('file', 'unknown'))
-        line_num = leak.get('StartLine', leak.get('line', '?'))
-        description = leak.get('Description', leak.get('description', 'unknown'))
-        print(f"  - {description} in {file_path}:{line_num}")
-    
-    return {
-        'total_leaks': len(leaks),
-        'high_entropy': sum(1 for l in leaks if l.get('Entropy', l.get('entropy', 0)) > 6.0),
-        'leaks_details': [  # Dodaj szczegóły do dashboardu
-            {
-                'description': l.get('Description', l.get('description', 'Unknown')),
-                'file': l.get('File', l.get('file', 'Unknown')),
-                'line': l.get('StartLine', l.get('line', 0))
-            }
-            for l in leaks
-        ]
-    }
+    elif isinstance(data, list):
+        print(f"Parsing Gitleaks JSON list format...")
+        leaks = data
+        print(f"Gitleaks JSON: Found {len(leaks)} secrets")
+        for leak in leaks[:5]:
+            # Pokaż więcej szczegółów
+            file_path = leak.get('File', leak.get('file', 'unknown'))
+            line_num = leak.get('StartLine', leak.get('line', '?'))
+            description = leak.get('Description', leak.get('description', 'unknown'))
+            print(f"  - {description} in {file_path}:{line_num}")
+        
+        return {
+            'total_leaks': len(leaks),
+            'high_entropy': sum(1 for l in leaks if l.get('Entropy', l.get('entropy', 0)) > 6.0),
+            'leaks_details': [  # Dodaj szczegóły do dashboardu
+                {
+                    'description': l.get('Description', l.get('description', 'Unknown')),
+                    'file': l.get('File', l.get('file', 'Unknown')),
+                    'line': l.get('StartLine', l.get('line', 0))
+                }
+                for l in leaks
+            ]
+        }
     
     # Format 3: STARY format Gitleaks JSON (z polem 'leaks')
     elif 'leaks' in data:
