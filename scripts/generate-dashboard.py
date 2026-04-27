@@ -92,17 +92,43 @@ def load_container_metrics():
     return vuln_counts
 
 def load_gitleaks_metrics():
-    """Load Gitleaks secret scan results"""
-    gitleaks_file = find_file('gitleaks-report.json')
+    """Load Gitleaks secret scan results (supports both JSON and SARIF)"""
+    # Szukaj plików JSON lub SARIF
+    gitleaks_file = find_file('gitleaks-report.json') or find_file('gitleaks-results.sarif')
+    
     if not gitleaks_file:
         print("Gitleaks report not found")
         return {'total_leaks': 0, 'high_entropy': 0}
     
     with open(gitleaks_file, 'r') as f:
         data = json.load(f)
-        leaks = data.get('leaks', [])
+    
+    # Sprawdź czy to SARIF
+    if 'runs' in data:
+        print("Parsing Gitleaks SARIF format...")
+        leaks = []
+        for run in data.get('runs', []):
+            for result in run.get('results', []):
+                leak = {
+                    'description': result.get('message', {}).get('text', ''),
+                    'file': result.get('locations', [{}])[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', ''),
+                    'line': result.get('locations', [{}])[0].get('physicalLocation', {}).get('region', {}).get('startLine', 0),
+                    'Entropy': 0  # SARIF nie zawiera entropii
+                }
+                leaks.append(leak)
+                print(f"  - {leak['description']} in {leak['file']}:{leak['line']}")
         
-    print(f"Gitleaks: Found {len(leaks)} secrets")
+        return {
+            'total_leaks': len(leaks),
+            'high_entropy': 0
+        }
+    
+    # Oryginalny format JSON
+    leaks = data.get('leaks', [])
+    print(f"Gitleaks JSON: Found {len(leaks)} secrets")
+    for leak in leaks:
+        print(f"  - {leak.get('description', 'unknown')}")
+    
     return {
         'total_leaks': len(leaks),
         'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
