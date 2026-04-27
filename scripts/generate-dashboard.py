@@ -92,8 +92,7 @@ def load_container_metrics():
     return vuln_counts
 
 def load_gitleaks_metrics():
-    """Load Gitleaks secret scan results (supports both JSON and SARIF)"""
-    # Szukaj plików JSON lub SARIF
+    """Load Gitleaks secret scan results (supports multiple formats)"""
     gitleaks_file = find_file('gitleaks-report.json') or find_file('gitleaks-results.sarif')
     
     if not gitleaks_file:
@@ -103,7 +102,7 @@ def load_gitleaks_metrics():
     with open(gitleaks_file, 'r') as f:
         data = json.load(f)
     
-    # Sprawdź czy to SARIF
+    # Format 1: SARIF
     if 'runs' in data:
         print("Parsing Gitleaks SARIF format...")
         leaks = []
@@ -113,26 +112,39 @@ def load_gitleaks_metrics():
                     'description': result.get('message', {}).get('text', ''),
                     'file': result.get('locations', [{}])[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', ''),
                     'line': result.get('locations', [{}])[0].get('physicalLocation', {}).get('region', {}).get('startLine', 0),
-                    'Entropy': 0  # SARIF nie zawiera entropii
                 }
                 leaks.append(leak)
-                print(f"  - {leak['description']} in {leak['file']}:{leak['line']}")
-        
+        print(f"Gitleaks SARIF: Found {len(leaks)} secrets")
         return {
             'total_leaks': len(leaks),
             'high_entropy': 0
         }
     
-    # Oryginalny format JSON
-    leaks = data.get('leaks', [])
-    print(f"Gitleaks JSON: Found {len(leaks)} secrets")
-    for leak in leaks:
-        print(f"  - {leak.get('description', 'unknown')}")
+    # Format 2: NOWY format Gitleaks JSON (lista bezpośrednio)
+    elif isinstance(data, list):
+        print(f"Parsing Gitleaks JSON list format...")
+        leaks = data
+        print(f"Gitleaks JSON: Found {len(leaks)} secrets")
+        for leak in leaks[:5]:  # Pokaz pierwsze 5
+            print(f"  - {leak.get('Description', leak.get('description', 'unknown'))}")
+        return {
+            'total_leaks': len(leaks),
+            'high_entropy': sum(1 for l in leaks if l.get('Entropy', l.get('entropy', 0)) > 6.0)
+        }
     
-    return {
-        'total_leaks': len(leaks),
-        'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
-    }
+    # Format 3: STARY format Gitleaks JSON (z polem 'leaks')
+    elif 'leaks' in data:
+        print("Parsing Gitleaks JSON (old format)...")
+        leaks = data.get('leaks', [])
+        print(f"Gitleaks JSON: Found {len(leaks)} secrets")
+        return {
+            'total_leaks': len(leaks),
+            'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
+        }
+    
+    else:
+        print(f"Unknown Gitleaks format. Keys: {data.keys() if isinstance(data, dict) else 'not a dict'}")
+        return {'total_leaks': 0, 'high_entropy': 0}
 
 def create_visualizations():
     """Create all visualizations for the dashboard"""
