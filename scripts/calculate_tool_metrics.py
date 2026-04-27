@@ -94,6 +94,9 @@ def generate_comparison_table():
     return tools_metrics
 
 if __name__ == "__main__":
+    # Utwórz katalog metrics jeśli nie istnieje
+    os.makedirs('metrics', exist_ok=True)
+    
     comparison = generate_comparison_table()
     
     # Zapisz do pliku JSON dla dashboardu
@@ -115,4 +118,4 @@ if __name__ == "__main__":
                    f"{vulns.get('MEDIUM', vulns.get('LOW', 0))} | "
                    f"{vulns.get('LOW', 0)} | {coverage}% |\n")
     
-    print("✅ Comparison metrics generated!")
+    print("✅ Comparison metrics generated successfully in metrics/ directory!")
