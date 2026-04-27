@@ -174,10 +174,19 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: final-metrics
           path: metrics/
+      
+      - name: List downloaded files (debug)
+        run: |
+          echo "Files in metrics directory:"
+          ls -la metrics/
+          echo ""
+          echo "Directory structure:"
+          find metrics/ -type f
       
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -186,10 +195,11 @@ jobs:
       
       - name: Install plotting dependencies
         run: |
-          pip install pandas matplotlib seaborn plotly
+          pip install matplotlib pandas numpy plotly
       
       - name: Generate dashboard
-        run: python scripts/generate-dashboard.py
+        run: |
+          python scripts/generate-dashboard.py
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -197,3 +207,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dashboard
           destination_dir: metrics-dashboard
+          keep_files: true  # Zachowaj historyczne dashboards
