@@ -1,7 +1,26 @@
+#!/usr/bin/env python3
 import json
 import os
-import time
+import sys
+import argparse
 from datetime import datetime
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--tool', type=str, required=True, help='Tool name (bandit, trivy, etc.)')
+    parser.add_argument('--start', type=str, help='Start time in nanoseconds')
+    parser.add_argument('--end', type=str, help='End time in nanoseconds')
+    return parser.parse_args()
+    
+def calculate_duration(start_ns, end_ns):
+    """Calculate duration in seconds and milliseconds"""
+    if not start_ns or not end_ns:
+        return {'duration_seconds': 'N/A', 'duration_ms': 'N/A'}
+    
+    duration_ns = int(end_ns) - int(start_ns)
+    return {
+        'duration_seconds': round(duration_ns / 1_000_000_000, 2),
+        'duration_ms': round(duration_ns / 1_000_000, 2)
 
 def calculate_coverage(report_file, tool_name):
     """Oblicza coverage narzędzia (ile plików/linii kodu zostało przeanalizowanych)"""
@@ -92,6 +111,79 @@ def generate_comparison_table():
         }
     
     return tools_metrics
+def get_bandit_metrics():
+    """Extract Bandit metrics from report"""
+    if not os.path.exists('bandit-report.json'):
+        return None
+    
+    with open('bandit-report.json') as f:
+        data = json.load(f)
+    
+    results = data.get('results', [])
+    metrics = data.get('metrics', {}).get('_totals', {})
+    
+    return {
+        'total_vulnerabilities': len(results),
+        'severity': {
+            'HIGH': sum(1 for r in results if r.get('issue_severity') == 'HIGH'),
+            'MEDIUM': sum(1 for r in results if r.get('issue_severity') == 'MEDIUM'),
+            'LOW': sum(1 for r in results if r.get('issue_severity') == 'LOW')
+        },
+        'confidence': {
+            'HIGH': metrics.get('CONFIDENCE.HIGH', 0),
+            'MEDIUM': metrics.get('CONFIDENCE.MEDIUM', 0),
+            'LOW': metrics.get('CONFIDENCE.LOW', 0)
+        },
+        'lines_of_code': metrics.get('loc', 0),
+        'nosec_count': metrics.get('nosec', 0)
+    }
+
+def save_metrics(tool_name, metrics, duration):
+    """Save metrics to JSON file"""
+    os.makedirs('metrics', exist_ok=True)
+    
+    # Load existing metrics if any
+    output_file = 'metrics/tool-metrics.json'
+    all_metrics = {}
+    if os.path.exists(output_file):
+        with open(output_file, 'r') as f:
+            all_metrics = json.load(f)
+    
+    # Add new metrics
+    all_metrics[tool_name] = {
+        'timestamp': datetime.now().isoformat(),
+        'duration': duration,
+        'metrics': metrics
+    }
+    
+    # Save to file
+    with open(output_file, 'w') as f:
+        json.dump(all_metrics, f, indent=2)
+    
+    print(f"✅ Saved metrics for {tool_name}")
+    print(f"   Duration: {duration.get('duration_seconds', 'N/A')} seconds")
+    
+    if metrics:
+        if 'total_vulnerabilities' in metrics:
+            print(f"   Vulnerabilities: {metrics['total_vulnerabilities']}")
+        elif 'CRITICAL' in metrics:
+            total = sum(metrics.values())
+            print(f"   Vulnerabilities: {total}")
+
+def main():
+    args = parse_arguments()
+    
+    # Calculate duration
+    duration = calculate_duration(args.start, args.end)
+    
+    # Get tool-specific metrics
+    metrics = None
+    if args.tool == 'bandit':
+        metrics = get_bandit_metrics()
+    # Add more tools here (trivy, etc.)
+    
+    # Save metrics
+    save_metrics(args.tool, metrics, duration)
 
 if __name__ == "__main__":
     # Utwórz katalog metrics jeśli nie istnieje
