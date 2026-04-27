@@ -72,26 +72,38 @@ jobs:
   
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
   
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         with:
-          args: detect --report-format json --report-path gitleaks-report.json || true
+          args: detect --report-format sarif --report-path gitleaks-results.sarif || true
       
-      - name: Debug - check if report was created
+      - name: Debug - check if file exists    # <-- DODAJ TEN KROK
         run: |
-          echo "=== Gitleaks report ==="
-          ls -la gitleaks-report.json || echo "File not found!"
-          if [ -f "gitleaks-report.json" ]; then
-            echo "File exists! Contents (first 20 lines):"
-            head -20 gitleaks-report.json
+          echo "=== Current directory contents ==="
+          ls -la
+          echo ""
+          echo "=== Looking for sarif files ==="
+          find . -name "*.sarif" -type f
+          echo ""
+          echo "=== Looking for gitleaks files ==="
+          find . -name "*gitleak*" -type f
+          echo ""
+          echo "=== File size if exists ==="
+          if [ -f "gitleaks-results.sarif" ]; then
+            echo "File exists! Size: $(wc -c < gitleaks-results.sarif) bytes"
+            head -5 gitleaks-results.sarif
+          else
+            echo "File gitleaks-results.sarif DOES NOT EXIST!"
           fi
       
       - name: Upload Gitleaks report
         uses: actions/upload-artifact@v4
         with:
           name: gitleaks-report
-          path: gitleaks-report.json
+          path: gitleaks-results.sarif   
 
 # ================= SCA (Trivy) =================
   sca:
