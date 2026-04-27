@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug repo structure
+        run: ls -R
       - name: Start build timer
         run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
       - name: Checkout code
