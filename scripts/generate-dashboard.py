@@ -46,6 +46,49 @@ def load_bandit_metrics():
         'medium_severity': medium,
         'low_severity': low,
     }
+
+def load_sonarqube_metrics():
+    """Load SonarQube metrics from report"""
+    sonar_file = find_file('sonarqube-metrics.json')
+    if not sonar_file:
+        print("SonarQube report not found")
+        return {'vulnerabilities': 0, 'bugs': 0, 'code_smells': 0, 'coverage': 0, 'security_hotspots': 0}
+    
+    with open(sonar_file, 'r') as f:
+        data = json.load(f)
+    
+    measures = data.get('component', {}).get('measures', [])
+    
+    result = {
+        'vulnerabilities': 0,
+        'bugs': 0,
+        'code_smells': 0,
+        'coverage': 0,
+        'security_hotspots': 0
+    }
+    
+    for m in measures:
+        metric = m.get('metric')
+        value = m.get('value', '0')
+        if metric == 'vulnerabilities':
+            result['vulnerabilities'] = int(value)
+        elif metric == 'bugs':
+            result['bugs'] = int(value)
+        elif metric == 'code_smells':
+            result['code_smells'] = int(value)
+        elif metric == 'coverage':
+            try:
+                result['coverage'] = float(value)
+            except:
+                result['coverage'] = 0
+        elif metric == 'security_hotspots':
+            result['security_hotspots'] = int(value)
+    
+    print(f"SonarQube: {result['vulnerabilities']} vulnerabilities, "
+          f"{result['bugs']} bugs, {result['code_smells']} code smells, "
+          f"{result['coverage']}% coverage")
+    
+    return result
     
 def load_trivy_metrics():
     """Load Trivy filesystem scan results"""
