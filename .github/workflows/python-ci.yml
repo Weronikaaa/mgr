@@ -111,6 +111,7 @@ jobs:
             -Dsonar.python.version=3.11
             -Dsonar.sources=apps/python-app
             -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.analysis.automatic=false
       
       - name: Download SonarQube report
         run: |
