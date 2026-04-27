@@ -7,134 +7,106 @@ import plotly.express as px
 import pandas as pd
 import numpy as np
 
+def find_file(pattern):
+    """Znajdź plik w dowolnym podkatalogu"""
+    # Szukaj w bieżącym katalogu i podkatalogach
+    for root, dirs, files in os.walk('.'):
+        for file in files:
+            if file == pattern or file.endswith(pattern):
+                full_path = os.path.join(root, file)
+                print(f"Found {pattern} at: {full_path}")
+                return full_path
+    print(f"Warning: {pattern} not found")
+    return None
+    
 def load_bandit_metrics():
     """Load Bandit SAST results correctly"""
-    import json
-    import os
+    bandit_file = find_file('bandit-report.json')
+    if not bandit_file:
+        print("Bandit report not found")
+        return {'vulnerabilities': 0, 'high_severity': 0, 'medium_severity': 0, 'low_severity': 0}
     
-    possible_paths = [
-        'metrics/bandit-report.json',
-        'bandit-report.json',
-        './bandit-report.json',
-        '../bandit-report.json'
-    ]
+    with open(bandit_file, 'r') as f:
+        data = json.load(f)
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            print(f"Found Bandit report at: {path}")
-            with open(path, 'r') as f:
-                data = json.load(f)
-            
-            # Bandit results to lista, nie słownik
-            results = data.get('results', [])
-            
-            print(f"Found {len(results)} issues")
-            
-            high = 0
-            medium = 0
-            low = 0
-            
-            for r in results:
-                severity = r.get('issue_severity', 'UNKNOWN')
-                if severity == 'HIGH':
-                    high += 1
-                elif severity == 'MEDIUM':
-                    medium += 1
-                elif severity == 'LOW':
-                    low += 1
-                print(f"  - {severity}: {r.get('test_name', 'unknown')}")
-            
-            return {
-                'vulnerabilities': len(results),
-                'high_severity': high,
-                'medium_severity': medium,
-                'low_severity': low,
-            }
+    results = data.get('results', [])
     
-    print("Bandit report not found in any expected location")
-    return {'vulnerabilities': 0, 'high_severity': 0, 'medium_severity': 0, 'low_severity': 0}
+    print(f"Bandit: Found {len(results)} issues")
+    
+    high = sum(1 for r in results if r.get('issue_severity') == 'HIGH')
+    medium = sum(1 for r in results if r.get('issue_severity') == 'MEDIUM')
+    low = sum(1 for r in results if r.get('issue_severity') == 'LOW')
+    
+    for r in results:
+        print(f"  - {r.get('issue_severity')}: {r.get('test_name', 'unknown')}")
+    
+    return {
+        'vulnerabilities': len(results),
+        'high_severity': high,
+        'medium_severity': medium,
+        'low_severity': low,
+    }
     
 def load_trivy_metrics():
     """Load Trivy filesystem scan results"""
-    possible_paths = [
-        'metrics/trivy-report.json',
-        'trivy-report.json',
-        './trivy-report.json'
-    ]
+    trivy_file = find_file('trivy-report.json')
+    if not trivy_file:
+        print("Trivy report not found")
+        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                data = json.load(f)
-            
-            vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'UNKNOWN': 0}
-            
-            # Trivy FS report structure
-            if 'Results' in data:
-                for result in data.get('Results', []):
-                    for vuln in result.get('Vulnerabilities', []):
-                        severity = vuln.get('Severity', 'UNKNOWN')
-                        if severity in vuln_counts:
-                            vuln_counts[severity] += 1
-            # Fallback for different Trivy output format
-            elif 'Vulnerabilities' in data:
-                for vuln in data.get('Vulnerabilities', []):
-                    severity = vuln.get('Severity', 'UNKNOWN')
-                    if severity in vuln_counts:
-                        vuln_counts[severity] += 1
-            
-            return vuln_counts
+    with open(trivy_file, 'r') as f:
+        data = json.load(f)
     
-    print("Warning: trivy-report.json not found")
-    return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'UNKNOWN': 0}
+    vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    
+    if 'Results' in data:
+        for result in data.get('Results', []):
+            for vuln in result.get('Vulnerabilities', []):
+                severity = vuln.get('Severity', 'UNKNOWN')
+                if severity in vuln_counts:
+                    vuln_counts[severity] += 1
+    
+    print(f"Trivy FS: {sum(vuln_counts.values())} total vulnerabilities")
+    return vuln_counts
 
 def load_container_metrics():
     """Load Trivy container scan results"""
-    possible_paths = [
-        'metrics/trivy-image.json',
-        'trivy-image.json',
-        './trivy-image.json'
-    ]
+    container_file = find_file('trivy-image.json')
+    if not container_file:
+        print("Container report not found")
+        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                data = json.load(f)
-            
-            vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-            
-            if 'Results' in data:
-                for result in data.get('Results', []):
-                    for vuln in result.get('Vulnerabilities', []):
-                        severity = vuln.get('Severity', 'UNKNOWN')
-                        if severity in vuln_counts:
-                            vuln_counts[severity] += 1
-            
-            return vuln_counts
+    with open(container_file, 'r') as f:
+        data = json.load(f)
     
-    print("Warning: trivy-image.json not found")
-    return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    
+    if 'Results' in data:
+        for result in data.get('Results', []):
+            for vuln in result.get('Vulnerabilities', []):
+                severity = vuln.get('Severity', 'UNKNOWN')
+                if severity in vuln_counts:
+                    vuln_counts[severity] += 1
+    
+    print(f"Container: {sum(vuln_counts.values())} total vulnerabilities")
+    return vuln_counts
 
 def load_gitleaks_metrics():
     """Load Gitleaks secret scan results"""
-    possible_paths = [
-        'metrics/gitleaks-report.json',
-        'gitleaks-report.json',
-        './gitleaks-report.json'
-    ]
+    gitleaks_file = find_file('gitleaks-report.json')
+    if not gitleaks_file:
+        print("Gitleaks report not found")
+        return {'total_leaks': 0, 'high_entropy': 0}
     
-    for path in possible_paths:
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                data = json.load(f)
-                leaks = data.get('leaks', [])
-                return {
-                    'total_leaks': len(leaks),
-                    'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
-                }
-    
-    print("Warning: gitleaks-report.json not found")
-    return {'total_leaks': 0, 'high_entropy': 0}
+    with open(gitleaks_file, 'r') as f:
+        data = json.load(f)
+        leaks = data.get('leaks', [])
+        
+    print(f"Gitleaks: Found {len(leaks)} secrets")
+    return {
+        'total_leaks': len(leaks),
+        'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
+    }
 
 def create_visualizations():
     """Create all visualizations for the dashboard"""
