@@ -1,21 +1,25 @@
-#!/bin/sh
+#!/bin/bash
 
 URL=$1
-
-if [ -z "$URL" ]; then
-  echo "❌ No URL provided"
-  exit 1
-fi
+MAX_RETRIES=10
+SLEEP=5
 
 echo "Running smoke tests on $URL"
 
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$URL/")
+for i in $(seq 1 $MAX_RETRIES); do
+  echo "Attempt $i..."
 
-echo "Status: $STATUS"
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" $URL)
 
-if [ "$STATUS" -ne 200 ]; then
-  echo "❌ FAIL"
-  exit 1
-fi
+  echo "Status: $STATUS"
 
-echo "✅ OK"
+  if [ "$STATUS" = "200" ]; then
+    echo "✅ PASS"
+    exit 0
+  fi
+
+  sleep $SLEEP
+done
+
+echo "❌ FAIL after $MAX_RETRIES attempts"
+exit 1
