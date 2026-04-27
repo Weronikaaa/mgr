@@ -75,35 +75,33 @@ jobs:
         with:
           fetch-depth: 0
   
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --report-format sarif --report-path gitleaks-results.sarif || true
-      
-      - name: Debug - check if file exists    # <-- DODAJ TEN KROK
+      - name: Install Gitleaks
         run: |
-          echo "=== Current directory contents ==="
-          ls -la
-          echo ""
-          echo "=== Looking for sarif files ==="
-          find . -name "*.sarif" -type f
-          echo ""
-          echo "=== Looking for gitleaks files ==="
-          find . -name "*gitleak*" -type f
-          echo ""
-          echo "=== File size if exists ==="
-          if [ -f "gitleaks-results.sarif" ]; then
-            echo "File exists! Size: $(wc -c < gitleaks-results.sarif) bytes"
-            head -5 gitleaks-results.sarif
-          else
-            echo "File gitleaks-results.sarif DOES NOT EXIST!"
-          fi
-      
+          # Pobierz i zainstaluj najnowszy Gitleaks
+          wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.0/gitleaks_8.18.0_linux_x64.tar.gz
+          tar xzf gitleaks_8.18.0_linux_x64.tar.gz
+          sudo mv gitleaks /usr/local/bin/
+          gitleaks version
+  
+      - name: Run Gitleaks (JSON format)
+        run: |
+          # Uruchom skanowanie i zapisz w formacie JSON (łatwiejszy do parsowania)
+          gitleaks detect --source . --report-format json --report-path gitleaks-report.json || true
+          
+          # Dodatkowo zapisz w SARIF (jeśli potrzebujesz)
+          gitleaks detect --source . --report-format sarif --report-path gitleaks-results.sarif || true
+          
+          # Pokaż co zostało utworzone
+          echo "=== Generated reports ==="
+          ls -la gitleaks-*
+  
       - name: Upload Gitleaks report
         uses: actions/upload-artifact@v4
         with:
           name: gitleaks-report
-          path: gitleaks-results.sarif   
+          path: |
+            gitleaks-report.json
+            gitleaks-results.sarif
 
 # ================= SCA (Trivy) =================
   sca:
