@@ -274,7 +274,7 @@ jobs:
 
   metrics:
     runs-on: ubuntu-latest
-    needs: [sast, gitleaks, sca, container-scan, smoke-tests]
+    needs: [sast-bandit, sast-sonarqube, gitleaks, sca-owasp, sca-trivy, container-scan, smoke-tests]
   
     steps:
       - uses: actions/checkout@v4
