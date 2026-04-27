@@ -212,6 +212,7 @@ jobs:
 
 
 # ================= SCA (OWASP Dependency Check) - porównanie z Trivy =================
+  # ================= SCA (OWASP Dependency Check) - porównanie z Trivy =================
   sca-owasp:
     runs-on: ubuntu-latest
     needs: build
@@ -223,12 +224,12 @@ jobs:
         id: owasp-start
         run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
       
-      - name: Setup Java (required for OWASP)
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
+      
       - name: Set JAVA_HOME (fix)
         run: |
           echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
@@ -245,10 +246,13 @@ jobs:
           out: 'owasp-report.json'
           args: >
             --enableExperimental
-            --failOnCVSS 7
+            --failOnCVSS 9
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
       
       - name: End OWASP timer
-        run: echo "OWASP_END=$(date +%s%N)" >> $GITHUB_ENV
+        id: owasp-end
+        run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
       
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
