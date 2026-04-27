@@ -8,29 +8,52 @@ import pandas as pd
 import numpy as np
 
 def load_bandit_metrics():
-    """Load Bandit SAST results"""
-    # Sprawdź różne możliwe lokalizacje
+    """Load Bandit SAST results correctly"""
+    import json
+    import os
+    
     possible_paths = [
         'metrics/bandit-report.json',
         'bandit-report.json',
-        './bandit-report.json'
+        './bandit-report.json',
+        '../bandit-report.json'
     ]
     
     for path in possible_paths:
         if os.path.exists(path):
+            print(f"Found Bandit report at: {path}")
             with open(path, 'r') as f:
                 data = json.load(f)
-                results = data.get('results', [])
-                return {
-                    'vulnerabilities': len(results),
-                    'high_severity': sum(1 for r in results if r.get('issue_severity') == 'HIGH'),
-                    'medium_severity': sum(1 for r in results if r.get('issue_severity') == 'MEDIUM'),
-                    'low_severity': sum(1 for r in results if r.get('issue_severity') == 'LOW'),
-                }
+            
+            # Bandit results to lista, nie słownik
+            results = data.get('results', [])
+            
+            print(f"Found {len(results)} issues")
+            
+            high = 0
+            medium = 0
+            low = 0
+            
+            for r in results:
+                severity = r.get('issue_severity', 'UNKNOWN')
+                if severity == 'HIGH':
+                    high += 1
+                elif severity == 'MEDIUM':
+                    medium += 1
+                elif severity == 'LOW':
+                    low += 1
+                print(f"  - {severity}: {r.get('test_name', 'unknown')}")
+            
+            return {
+                'vulnerabilities': len(results),
+                'high_severity': high,
+                'medium_severity': medium,
+                'low_severity': low,
+            }
     
-    print("Warning: bandit-report.json not found")
+    print("Bandit report not found in any expected location")
     return {'vulnerabilities': 0, 'high_severity': 0, 'medium_severity': 0, 'low_severity': 0}
-
+    
 def load_trivy_metrics():
     """Load Trivy filesystem scan results"""
     possible_paths = [
