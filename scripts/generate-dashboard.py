@@ -575,26 +575,26 @@ def create_visualizations():
             
             <div class="grid-2">
                 <div class="card">
-                    <h2>📁 Trivy Filesystem Scan</h2>
-                    <img src="trivy_fs_vulns.png" alt="Trivy FS Vulnerabilities">
+                    <h2>🐍 Bandit SAST Results</h2>
+                    <img src="bandit_vulns.png" alt="Bandit Vulnerabilities">
                     <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> {sum(trivy_data.values())} total issues
-                        (Critical: {trivy_data['CRITICAL']}, High: {trivy_data['HIGH']}, 
-                        Medium: {trivy_data['MEDIUM']}, Low: {trivy_data['LOW']})
+                        <strong>Summary:</strong> Found {bandit_data['vulnerabilities']} vulnerabilities
+                        ({bandit_data['high_severity']} high, {bandit_data['medium_severity']} medium, {bandit_data['low_severity']} low)
                     </p>
                 </div>
                 
                 <div class="card">
-                    <h2>🐳 Container Image Scan</h2>
-                    <img src="container_vulns.png" alt="Container Vulnerabilities">
+                    <h2>📊 SonarQube Cloud Results</h2>
                     <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> {sum(container_data.values())} total issues
-                        (Critical: {container_data['CRITICAL']}, High: {container_data['HIGH']}, 
-                        Medium: {container_data['MEDIUM']}, Low: {container_data['LOW']})
+                        <strong>Vulnerabilities:</strong> {sonarqube_data.get('vulnerabilities', 0)}<br>
+                        <strong>Bugs:</strong> {sonarqube_data.get('bugs', 0)}<br>
+                        <strong>Code Smells:</strong> {sonarqube_data.get('code_smells', 0)}<br>
+                        <strong>Security Hotspots:</strong> {sonarqube_data.get('security_hotspots', 0)}<br>
+                        <strong>Coverage:</strong> {sonarqube_data.get('coverage', 0)}%
                     </p>
                 </div>
             </div>
-            
+                        
             <div class="card">
                 <h2>📊 Detailed Summary</h2>
                 <img src="summary_table.png" alt="Summary Table" style="max-width: 100%;">
