@@ -225,24 +225,31 @@ jobs:
       
       - name: Run OWASP Dependency Check (Docker)
         run: |
-          # Uruchom OWASP w kontenerze Docker
+          # Uruchom OWASP w kontenerze Docker (bez --disableRetired)
           docker run --rm \
             -v $(pwd):/src \
             owasp/dependency-check:latest \
             --scan /src/apps/python-app \
             --format JSON \
             --out /src \
-            --enableExperimental \
-            --disableRetired
+            --enableExperimental
           
           # Sprawdź czy raport został utworzony
           if [ -f "dependency-check-report.json" ]; then
             mv dependency-check-report.json owasp-report.json
             echo "✅ OWASP report created successfully"
-            ls -la owasp-report.json
+            echo "Report size: $(wc -c < owasp-report.json) bytes"
+          elif [ -f "owasp-report.json" ]; then
+            echo "✅ OWASP report already exists"
           else
             echo "⚠️ OWASP report not created, creating empty report"
             echo '{"dependencies": [], "vulnerabilities": []}' > owasp-report.json
+          fi
+          
+          # Pokaż pierwsze linie raportu dla debug
+          if [ -f "owasp-report.json" ]; then
+            echo "=== First 10 lines of report ==="
+            head -10 owasp-report.json
           fi
       
       - name: End OWASP timer
@@ -254,6 +261,7 @@ jobs:
         with:
           name: owasp-report
           path: owasp-report.json
+        
 # ================= CONTAINER SCAN =================
   container-scan:
     runs-on: ubuntu-latest
