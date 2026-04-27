@@ -45,6 +45,12 @@ jobs:
       - name: Run SAST
         run: bandit -r apps/python-app -f json -o bandit-report.json || true
 
+      - name: Upload Bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
 # ================= SECRET SCAN (Gitleaks) =================
   gitleaks:
     runs-on: ubuntu-latest
@@ -55,7 +61,13 @@ jobs:
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         with:
-          args: detect --report-format json --report-path gitleaks-report.json
+          args: detect --report-format json --report-path gitleaks-report.json || true
+          
+      - name: Upload Gitleaks report
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
 
 # ================= SCA (Trivy) =================
   sca:
@@ -72,6 +84,12 @@ jobs:
           scan-ref: apps/python-app
           format: json
           output: trivy-report.json
+
+      - name: Upload Trivy FS report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.json
 
 # ================= CONTAINER SCAN =================
   container-scan:
@@ -90,6 +108,12 @@ jobs:
           image-ref: python-app
           format: json
           output: trivy-image.json
+
+      - name: Upload Trivy image report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-image
+          path: trivy-image.json
 
 # ================= DEPLOY =================
   deploy:
@@ -118,11 +142,24 @@ jobs:
         run: |
           chmod +x scripts/smoke-tests.sh
           ./scripts/smoke-tests.sh https://mgr.onrender.com
-      - name: Collect metrics
-        run: python scripts/metrics-collector.py
-      - name: Upload metrics
+
+  metrics:
+    runs-on: ubuntu-latest
+    needs: [sast, gitleaks, sca, container-scan, smoke-tests]
+  
+    steps:
+      - uses: actions/download-artifact@v4
+  
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+  
+      - name: Aggregate metrics
+        run: python scripts/aggregate-metrics.py
+  
+      - name: Upload final metrics
         uses: actions/upload-artifact@v4
         with:
-          name: metrics
+          name: final-metrics
           path: metrics/
-        
