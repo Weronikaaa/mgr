@@ -21,6 +21,7 @@ def calculate_duration(start_ns, end_ns):
     return {
         'duration_seconds': round(duration_ns / 1_000_000_000, 2),
         'duration_ms': round(duration_ns / 1_000_000, 2)
+    }
 
 def calculate_coverage(report_file, tool_name):
     """Oblicza coverage narzędzia (ile plików/linii kodu zostało przeanalizowanych)"""
