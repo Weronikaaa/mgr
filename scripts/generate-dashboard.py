@@ -159,7 +159,104 @@ def load_gitleaks_metrics():
     else:
         print(f"Unknown Gitleaks format. Keys: {data.keys() if isinstance(data, dict) else 'not a dict'}")
         return {'total_leaks': 0, 'high_entropy': 0}
-
+# Po wczytaniu metryk, dodaj porównanie
+def add_comparison_section(html_content):
+    """Dodaje sekcję porównawczą do dashboardu"""
+    
+    comparison_section = """
+    <div class="card">
+        <h2>📊 Tool Comparison: Bandit vs SonarQube | Trivy vs OWASP</h2>
+        
+        <h3>SAST Tools Comparison</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Bandit</th>
+                    <th>SonarQube Cloud</th>
+                    <th>Difference</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Detection Time (s)</td>
+                    <td>${BANDIT_TIME}</td>
+                    <td>${SONAR_TIME}</td>
+                    <td>${TIME_DIFF}</td>
+                </tr>
+                <tr>
+                    <td>Vulnerabilities Found</td>
+                    <td>${BANDIT_COUNT}</td>
+                    <td>${SONAR_COUNT}</td>
+                    <td>${COUNT_DIFF}</td>
+                </tr>
+                <tr>
+                    <td>False Positive Rate</td>
+                    <td>${BANDIT_FPR}%</td>
+                    <td>${SONAR_FPR}%</td>
+                    <td>${FPR_DIFF}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <h3>SCA Tools Comparison</h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Trivy</th>
+                    <th>OWASP DC</th>
+                    <th>Difference</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Scan Time (s)</td>
+                    <td>${TRIVY_TIME}</td>
+                    <td>${OWASP_TIME}</td>
+                    <td>${SCA_TIME_DIFF}</td>
+                </tr>
+                <tr>
+                    <td>Vulnerabilities Found</td>
+                    <td>${TRIVY_COUNT}</td>
+                    <td>${OWASP_COUNT}</td>
+                    <td>${SCA_COUNT_DIFF}</td>
+                </tr>
+                <tr>
+                    <td>Database Size (MB)</td>
+                    <td>50</td>
+                    <td>350</td>
+                    <td>-300</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    """
+    
+    # Wypełnij zmienne rzeczywistymi danymi
+    # (pobierz z wcześniej obliczonych metryk)
+    
+    return html_content.replace('${BANDIT_TIME}', os.getenv('BANDIT_DURATION', 'N/A'))
+    
+def create_comparison_charts():
+    """Tworzy wykresy porównawcze dla narzędzi"""
+    
+    # Wykres słupkowy: Bandit vs SonarQube
+    tools = ['Bandit', 'SonarQube']
+    vuln_counts = [8, sonarqube_vulns]  # pobierz z raportu
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bars = ax.bar(tools, vuln_counts, color=['#667eea', '#764ba2'])
+    ax.set_title('SAST Tools Comparison: Vulnerabilities Detected')
+    ax.set_ylabel('Number of Vulnerabilities')
+    
+    for bar, count in zip(bars, vuln_counts):
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+               str(count), ha='center', va='bottom')
+    
+    plt.savefig('dashboard/sast_comparison.png')
+    plt.close()
+    
 def create_visualizations():
     """Create all visualizations for the dashboard"""
     
