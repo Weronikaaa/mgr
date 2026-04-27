@@ -232,7 +232,7 @@ jobs:
             --scan /src/apps/python-app \
             --format JSON \
             --out /src \
-            --enableExperimental
+            --nvdApiKey ${{ secrets.NVD_API_KEY }}
           
           # Sprawdź czy raport został utworzony
           if [ -f "dependency-check-report.json" ]; then
