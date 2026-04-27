@@ -66,17 +66,27 @@ jobs:
           path: bandit-report.json
 
 # ================= SECRET SCAN (Gitleaks) =================
+# ================= SECRET SCAN (Gitleaks) =================
   gitleaks:
     runs-on: ubuntu-latest
-
+  
     steps:
       - uses: actions/checkout@v4
-
+  
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --report-format json --report-path gitleaks-report.json || true
-          
+      
+      - name: Debug - check if report was created
+        run: |
+          echo "=== Gitleaks report ==="
+          ls -la gitleaks-report.json || echo "File not found!"
+          if [ -f "gitleaks-report.json" ]; then
+            echo "File exists! Contents (first 20 lines):"
+            head -20 gitleaks-report.json
+          fi
+      
       - name: Upload Gitleaks report
         uses: actions/upload-artifact@v4
         with:
