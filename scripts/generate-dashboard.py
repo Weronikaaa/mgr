@@ -308,6 +308,7 @@ def create_visualizations():
     
     # Wczytaj wszystkie metryki
     bandit_data = load_bandit_metrics()
+    sonarqube_data = load_sonarqube_metrics()
     trivy_data = load_trivy_metrics()
     container_data = load_container_metrics()
     gitleaks_data = load_gitleaks_metrics()
@@ -564,26 +565,6 @@ def create_visualizations():
                 </div>
                 
                 <div class="card">
-                    <h2>🔍 Gitleaks Secrets Scan</h2>
-                    <img src="summary_table.png" alt="Summary Table">
-                    <p style="margin-top: 15px;">
-                        <strong>Secrets found:</strong> {gitleaks_data['total_leaks']} potential secrets
-                        ({gitleaks_data['high_entropy']} with high entropy)
-                    </p>
-                </div>
-            </div>
-            
-            <div class="grid-2">
-                <div class="card">
-                    <h2>🐍 Bandit SAST Results</h2>
-                    <img src="bandit_vulns.png" alt="Bandit Vulnerabilities">
-                    <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> Found {bandit_data['vulnerabilities']} vulnerabilities
-                        ({bandit_data['high_severity']} high, {bandit_data['medium_severity']} medium, {bandit_data['low_severity']} low)
-                    </p>
-                </div>
-                
-                <div class="card">
                     <h2>📊 SonarQube Cloud Results</h2>
                     <p style="margin-top: 15px;">
                         <strong>Vulnerabilities:</strong> {sonarqube_data.get('vulnerabilities', 0)}<br>
@@ -594,10 +575,35 @@ def create_visualizations():
                     </p>
                 </div>
             </div>
-                        
+            
+            <div class="grid-2">
+                <div class="card">
+                    <h2>📁 Trivy Filesystem Scan</h2>
+                    <img src="trivy_fs_vulns.png" alt="Trivy FS Vulnerabilities">
+                    <p style="margin-top: 15px;">
+                        <strong>Summary:</strong> {sum(trivy_data.values())} total issues
+                        (Critical: {trivy_data['CRITICAL']}, High: {trivy_data['HIGH']}, 
+                        Medium: {trivy_data['MEDIUM']}, Low: {trivy_data['LOW']})
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h2>🐳 Container Image Scan</h2>
+                    <img src="container_vulns.png" alt="Container Vulnerabilities">
+                    <p style="margin-top: 15px;">
+                        <strong>Summary:</strong> {sum(container_data.values())} total issues
+                        (Critical: {container_data['CRITICAL']}, High: {container_data['HIGH']}, 
+                        Medium: {container_data['MEDIUM']}, Low: {container_data['LOW']})
+                    </p>
+                </div>
+            </div>
+            
             <div class="card">
-                <h2>📊 Detailed Summary</h2>
+                <h2>🔑 Secrets Found</h2>
                 <img src="summary_table.png" alt="Summary Table" style="max-width: 100%;">
+                <p style="margin-top: 15px;">
+                    <strong>Total secrets:</strong> {gitleaks_data['total_leaks']} found
+                </p>
             </div>
         </div>
     </body>
