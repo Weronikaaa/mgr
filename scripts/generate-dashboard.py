@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 import os
 import sys
@@ -9,7 +10,6 @@ import numpy as np
 
 def find_file(pattern):
     """Znajdź plik w dowolnym podkatalogu"""
-    # Szukaj w bieżącym katalogu i podkatalogach
     for root, dirs, files in os.walk('.'):
         for file in files:
             if file == pattern or file.endswith(pattern):
@@ -18,54 +18,61 @@ def find_file(pattern):
                 return full_path
     print(f"Warning: {pattern} not found")
     return None
-    
+
 def load_bandit_metrics():
-    """Load Bandit SAST results correctly"""
+    """Load Bandit SAST results"""
     bandit_file = find_file('bandit-report.json')
     if not bandit_file:
-        print("Bandit report not found")
-        return {'vulnerabilities': 0, 'high_severity': 0, 'medium_severity': 0, 'low_severity': 0}
+        return {'vulnerabilities': 0, 'high': 0, 'medium': 0, 'low': 0}
     
     with open(bandit_file, 'r') as f:
         data = json.load(f)
     
     results = data.get('results', [])
+    return {
+        'vulnerabilities': len(results),
+        'high': sum(1 for r in results if r.get('issue_severity') == 'HIGH'),
+        'medium': sum(1 for r in results if r.get('issue_severity') == 'MEDIUM'),
+        'low': sum(1 for r in results if r.get('issue_severity') == 'LOW')
+    }
+
+def load_semgrep_metrics():
+    """Load Semgrep SAST results"""
+    semgrep_file = find_file('semgrep-report.json')
+    if not semgrep_file:
+        return {'vulnerabilities': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
     
-    print(f"Bandit: Found {len(results)} issues")
+    with open(semgrep_file, 'r') as f:
+        data = json.load(f)
     
-    high = sum(1 for r in results if r.get('issue_severity') == 'HIGH')
-    medium = sum(1 for r in results if r.get('issue_severity') == 'MEDIUM')
-    low = sum(1 for r in results if r.get('issue_severity') == 'LOW')
+    results = data.get('results', [])
+    severity_map = {'ERROR': 'critical', 'WARNING': 'high', 'INFO': 'medium'}
+    severity_counts = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
     
     for r in results:
-        print(f"  - {r.get('issue_severity')}: {r.get('test_name', 'unknown')}")
+        sev = r.get('extra', {}).get('severity', 'INFO')
+        mapped = severity_map.get(sev, 'medium')
+        severity_counts[mapped] += 1
     
     return {
         'vulnerabilities': len(results),
-        'high_severity': high,
-        'medium_severity': medium,
-        'low_severity': low,
+        'critical': severity_counts['critical'],
+        'high': severity_counts['high'],
+        'medium': severity_counts['medium'],
+        'low': severity_counts['low']
     }
 
 def load_sonarqube_metrics():
-    """Load SonarQube metrics from report"""
+    """Load SonarQube metrics"""
     sonar_file = find_file('sonarqube-metrics.json')
     if not sonar_file:
-        print("SonarQube report not found")
         return {'vulnerabilities': 0, 'bugs': 0, 'code_smells': 0, 'coverage': 0, 'security_hotspots': 0}
     
     with open(sonar_file, 'r') as f:
         data = json.load(f)
     
     measures = data.get('component', {}).get('measures', [])
-    
-    result = {
-        'vulnerabilities': 0,
-        'bugs': 0,
-        'code_smells': 0,
-        'coverage': 0,
-        'security_hotspots': 0
-    }
+    result = {'vulnerabilities': 0, 'bugs': 0, 'code_smells': 0, 'coverage': 0, 'security_hotspots': 0}
     
     for m in measures:
         metric = m.get('metric')
@@ -84,406 +91,357 @@ def load_sonarqube_metrics():
         elif metric == 'security_hotspots':
             result['security_hotspots'] = int(value)
     
-    print(f"SonarQube: {result['vulnerabilities']} vulnerabilities, "
-          f"{result['bugs']} bugs, {result['code_smells']} code smells, "
-          f"{result['coverage']}% coverage")
-    
     return result
-    
-def load_trivy_metrics():
-    """Load Trivy filesystem scan results"""
-    trivy_file = find_file('trivy-report.json')
-    if not trivy_file:
-        print("Trivy report not found")
-        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-    
-    with open(trivy_file, 'r') as f:
-        data = json.load(f)
-    
-    vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-    
-    if 'Results' in data:
-        for result in data.get('Results', []):
-            for vuln in result.get('Vulnerabilities', []):
-                severity = vuln.get('Severity', 'UNKNOWN')
-                if severity in vuln_counts:
-                    vuln_counts[severity] += 1
-    
-    print(f"Trivy FS: {sum(vuln_counts.values())} total vulnerabilities")
-    return vuln_counts
-
-def load_container_metrics():
-    """Load Trivy container scan results"""
-    container_file = find_file('trivy-image.json')
-    if not container_file:
-        print("Container report not found")
-        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-    
-    with open(container_file, 'r') as f:
-        data = json.load(f)
-    
-    vuln_counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
-    
-    if 'Results' in data:
-        for result in data.get('Results', []):
-            for vuln in result.get('Vulnerabilities', []):
-                severity = vuln.get('Severity', 'UNKNOWN')
-                if severity in vuln_counts:
-                    vuln_counts[severity] += 1
-    
-    print(f"Container: {sum(vuln_counts.values())} total vulnerabilities")
-    return vuln_counts
 
 def load_gitleaks_metrics():
-    """Load Gitleaks secret scan results (supports multiple formats)"""
-    gitleaks_file = find_file('gitleaks-report.json') or find_file('gitleaks-results.sarif')
-    
+    """Load Gitleaks secret scan results"""
+    gitleaks_file = find_file('gitleaks-report.json')
     if not gitleaks_file:
-        print("Gitleaks report not found")
-        return {'total_leaks': 0, 'high_entropy': 0}
+        return {'total_leaks': 0, 'critical': 0, 'high': 0}
     
     with open(gitleaks_file, 'r') as f:
         data = json.load(f)
     
-    # Format 1: SARIF
-    if 'runs' in data:
-        print("Parsing Gitleaks SARIF format...")
-        leaks = []
-        for run in data.get('runs', []):
-            for result in run.get('results', []):
-                leak = {
-                    'description': result.get('message', {}).get('text', ''),
-                    'file': result.get('locations', [{}])[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', ''),
-                    'line': result.get('locations', [{}])[0].get('physicalLocation', {}).get('region', {}).get('startLine', 0),
-                }
-                leaks.append(leak)
-        print(f"Gitleaks SARIF: Found {len(leaks)} secrets")
-        return {
-            'total_leaks': len(leaks),
-            'high_entropy': 0
-        }
-    
-    # Format 2: NOWY format Gitleaks JSON (lista bezpośrednio)
-    # W funkcji load_gitleaks_metrics(), w sekcji JSON list format:
-    elif isinstance(data, list):
-        print(f"Parsing Gitleaks JSON list format...")
+    # Format: lista bezpośrednia
+    if isinstance(data, list):
         leaks = data
-        print(f"Gitleaks JSON: Found {len(leaks)} secrets")
-        for leak in leaks[:5]:
-            # Pokaż więcej szczegółów
-            file_path = leak.get('File', leak.get('file', 'unknown'))
-            line_num = leak.get('StartLine', leak.get('line', '?'))
-            description = leak.get('Description', leak.get('description', 'unknown'))
-            print(f"  - {description} in {file_path}:{line_num}")
-        
         return {
             'total_leaks': len(leaks),
-            'high_entropy': sum(1 for l in leaks if l.get('Entropy', l.get('entropy', 0)) > 6.0),
-            'leaks_details': [  # Dodaj szczegóły do dashboardu
-                {
-                    'description': l.get('Description', l.get('description', 'Unknown')),
-                    'file': l.get('File', l.get('file', 'Unknown')),
-                    'line': l.get('StartLine', l.get('line', 0))
-                }
-                for l in leaks
-            ]
+            'secrets': [{'file': l.get('File', 'unknown'), 'line': l.get('StartLine', 0), 
+                        'description': l.get('Description', l.get('description', 'Secret found'))} 
+                       for l in leaks[:10]]
         }
-    
-    # Format 3: STARY format Gitleaks JSON (z polem 'leaks')
+    # Format: z polem 'leaks'
     elif 'leaks' in data:
-        print("Parsing Gitleaks JSON (old format)...")
         leaks = data.get('leaks', [])
-        print(f"Gitleaks JSON: Found {len(leaks)} secrets")
-        return {
-            'total_leaks': len(leaks),
-            'high_entropy': sum(1 for l in leaks if l.get('Entropy', 0) > 6.0)
-        }
-    
+        return {'total_leaks': len(leaks), 'secrets': []}
     else:
-        print(f"Unknown Gitleaks format. Keys: {data.keys() if isinstance(data, dict) else 'not a dict'}")
-        return {'total_leaks': 0, 'high_entropy': 0}
-# Po wczytaniu metryk, dodaj porównanie
-def add_comparison_section(html_content):
-    """Dodaje sekcję porównawczą do dashboardu"""
+        return {'total_leaks': 0, 'secrets': []}
+
+def load_trufflehog_metrics():
+    """Load TruffleHog secret scan results"""
+    trufflehog_file = find_file('trufflehog-report.json')
+    if not trufflehog_file:
+        return {'total_secrets': 0, 'detectors': []}
     
-    comparison_section = """
-    <div class="card">
-        <h2>📊 Tool Comparison: Bandit vs SonarQube | Trivy vs OWASP</h2>
-        
-        <h3>SAST Tools Comparison</h3>
-        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Bandit</th>
-                    <th>SonarQube Cloud</th>
-                    <th>Difference</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Detection Time (s)</td>
-                    <td>${BANDIT_TIME}</td>
-                    <td>${SONAR_TIME}</td>
-                    <td>${TIME_DIFF}</td>
-                </tr>
-                <tr>
-                    <td>Vulnerabilities Found</td>
-                    <td>${BANDIT_COUNT}</td>
-                    <td>${SONAR_COUNT}</td>
-                    <td>${COUNT_DIFF}</td>
-                </tr>
-                <tr>
-                    <td>False Positive Rate</td>
-                    <td>${BANDIT_FPR}%</td>
-                    <td>${SONAR_FPR}%</td>
-                    <td>${FPR_DIFF}</td>
-                </tr>
-            </tbody>
-        </table>
-        
-        <h3>SCA Tools Comparison</h3>
-        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
-            <thead>
-                <tr>
-                    <th>Metric</th>
-                    <th>Trivy</th>
-                    <th>OWASP DC</th>
-                    <th>Difference</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Scan Time (s)</td>
-                    <td>${TRIVY_TIME}</td>
-                    <td>${OWASP_TIME}</td>
-                    <td>${SCA_TIME_DIFF}</td>
-                </tr>
-                <tr>
-                    <td>Vulnerabilities Found</td>
-                    <td>${TRIVY_COUNT}</td>
-                    <td>${OWASP_COUNT}</td>
-                    <td>${SCA_COUNT_DIFF}</td>
-                </tr>
-                <tr>
-                    <td>Database Size (MB)</td>
-                    <td>50</td>
-                    <td>350</td>
-                    <td>-300</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    """
+    with open(trufflehog_file, 'r') as f:
+        lines = f.readlines()
     
-    # Wypełnij zmienne rzeczywistymi danymi
-    # (pobierz z wcześniej obliczonych metryk)
+    findings = []
+    for line in lines:
+        try:
+            findings.append(json.loads(line))
+        except:
+            continue
     
-    return html_content.replace('${BANDIT_TIME}', os.getenv('BANDIT_DURATION', 'N/A'))
+    detectors = list(set(f.get('DetectorName', 'unknown') for f in findings))
     
-def create_comparison_charts():
-    """Tworzy wykresy porównawcze dla narzędzi"""
+    return {
+        'total_secrets': len(findings),
+        'detectors': detectors,
+        'critical': sum(1 for f in findings if 'credential' in f.get('DetectorName', '').lower()),
+        'high': sum(1 for f in findings if 'token' in f.get('DetectorName', '').lower()),
+        'medium': len(findings) - sum(1 for f in findings if 'credential' in f.get('DetectorName', '').lower() or 'token' in f.get('DetectorName', '').lower())
+    }
+
+def load_trivy_fs_metrics():
+    """Load Trivy filesystem scan results"""
+    trivy_file = find_file('trivy-report.json')
+    if not trivy_file:
+        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'total': 0}
     
-    # Wykres słupkowy: Bandit vs SonarQube
-    tools = ['Bandit', 'SonarQube']
-    vuln_counts = [8, sonarqube_vulns]  # pobierz z raportu
+    with open(trivy_file, 'r') as f:
+        data = json.load(f)
+    
+    counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    for result in data.get('Results', []):
+        for vuln in result.get('Vulnerabilities', []):
+            severity = vuln.get('Severity', 'UNKNOWN')
+            if severity in counts:
+                counts[severity] += 1
+    
+    return {**counts, 'total': sum(counts.values())}
+
+def load_trivy_container_metrics():
+    """Load Trivy container scan results"""
+    container_file = find_file('trivy-image.json')
+    if not container_file:
+        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'total': 0}
+    
+    with open(container_file, 'r') as f:
+        data = json.load(f)
+    
+    counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    for result in data.get('Results', []):
+        for vuln in result.get('Vulnerabilities', []):
+            severity = vuln.get('Severity', 'UNKNOWN')
+            if severity in counts:
+                counts[severity] += 1
+    
+    return {**counts, 'total': sum(counts.values())}
+
+def load_grype_metrics():
+    """Load Grype container scan results"""
+    grype_file = find_file('grype-report.json')
+    if not grype_file:
+        return {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0, 'total': 0}
+    
+    with open(grype_file, 'r') as f:
+        data = json.load(f)
+    
+    matches = data.get('matches', [])
+    severity_map = {'Critical': 'CRITICAL', 'High': 'HIGH', 'Medium': 'MEDIUM', 'Low': 'LOW', 'Negligible': 'LOW'}
+    counts = {'CRITICAL': 0, 'HIGH': 0, 'MEDIUM': 0, 'LOW': 0}
+    
+    for match in matches:
+        sev = match.get('vulnerability', {}).get('severity', 'Low')
+        mapped = severity_map.get(sev, 'LOW')
+        counts[mapped] += 1
+    
+    return {**counts, 'total': len(matches)}
+
+def load_tool_metrics():
+    """Load metrics from all tools"""
+    return {
+        'bandit': load_bandit_metrics(),
+        'semgrep': load_semgrep_metrics(),
+        'sonarqube': load_sonarqube_metrics(),
+        'gitleaks': load_gitleaks_metrics(),
+        'trufflehog': load_trufflehog_metrics(),
+        'trivy_fs': load_trivy_fs_metrics(),
+        'trivy_container': load_trivy_container_metrics(),
+        'grype': load_grype_metrics(),
+        'timestamp': datetime.now().isoformat(),
+        'run_id': os.getenv('GITHUB_RUN_ID', 'N/A'),
+        'branch': os.getenv('GITHUB_REF_NAME', 'N/A')
+    }
+
+def create_comparison_charts(metrics):
+    """Create comparison charts for SAST and SCA tools"""
+    os.makedirs('dashboard', exist_ok=True)
+    
+    # SAST Tools Comparison
+    sast_tools = ['Bandit', 'Semgrep', 'SonarQube']
+    sast_counts = [
+        metrics['bandit']['vulnerabilities'],
+        metrics['semgrep']['vulnerabilities'],
+        metrics['sonarqube']['vulnerabilities']
+    ]
     
     fig, ax = plt.subplots(figsize=(10, 6))
-    bars = ax.bar(tools, vuln_counts, color=['#667eea', '#764ba2'])
-    ax.set_title('SAST Tools Comparison: Vulnerabilities Detected')
+    bars = ax.bar(sast_tools, sast_counts, color=['#667eea', '#48bb78', '#ed8936'])
+    ax.set_title('SAST Tools Comparison: Total Vulnerabilities Detected')
     ax.set_ylabel('Number of Vulnerabilities')
-    
-    for bar, count in zip(bars, vuln_counts):
-        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-               str(count), ha='center', va='bottom')
-    
+    for bar, count in zip(bars, sast_counts):
+        if count > 0:
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                   str(count), ha='center', va='bottom')
+    plt.tight_layout()
     plt.savefig('dashboard/sast_comparison.png')
     plt.close()
     
-def create_visualizations():
-    """Create all visualizations for the dashboard"""
+    # Secret Scanning Tools Comparison
+    secret_tools = ['Gitleaks', 'TruffleHog']
+    secret_counts = [
+        metrics['gitleaks']['total_leaks'],
+        metrics['trufflehog']['total_secrets']
+    ]
     
-    # Stwórz katalog dashboard jeśli nie istnieje
+    fig, ax = plt.subplots(figsize=(8, 6))
+    bars = ax.bar(secret_tools, secret_counts, color=['#9b59b6', '#e74c3c'])
+    ax.set_title('Secret Scanning Tools Comparison')
+    ax.set_ylabel('Number of Secrets Found')
+    for bar, count in zip(bars, secret_counts):
+        if count > 0:
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                   str(count), ha='center', va='bottom')
+    plt.tight_layout()
+    plt.savefig('dashboard/secret_comparison.png')
+    plt.close()
+    
+    # Container Scanning Tools Comparison
+    container_tools = ['Trivy Container', 'Grype']
+    container_critical = [
+        metrics['trivy_container']['CRITICAL'],
+        metrics['grype']['CRITICAL']
+    ]
+    container_high = [
+        metrics['trivy_container']['HIGH'],
+        metrics['grype']['HIGH']
+    ]
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    x = np.arange(len(container_tools))
+    width = 0.35
+    
+    bars1 = ax.bar(x - width/2, container_critical, width, label='Critical', color='darkred')
+    bars2 = ax.bar(x + width/2, container_high, width, label='High', color='orange')
+    
+    ax.set_xlabel('Tool')
+    ax.set_ylabel('Count')
+    ax.set_title('Container Scanning Tools: Critical & High Vulnerabilities')
+    ax.set_xticks(x)
+    ax.set_xticklabels(container_tools)
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.savefig('dashboard/container_comparison.png')
+    plt.close()
+
+def create_severity_charts(metrics):
+    """Create severity distribution charts for each tool"""
     os.makedirs('dashboard', exist_ok=True)
     
-    # Wczytaj wszystkie metryki
-    bandit_data = load_bandit_metrics()
-    sonarqube_data = load_sonarqube_metrics()
-    trivy_data = load_trivy_metrics()
-    container_data = load_container_metrics()
-    gitleaks_data = load_gitleaks_metrics()
+    # Bandit severity
+    bandit_sev = [metrics['bandit']['high'], metrics['bandit']['medium'], metrics['bandit']['low']]
+    if sum(bandit_sev) > 0:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        bars = ax.bar(['High', 'Medium', 'Low'], bandit_sev, color=['darkred', 'orange', 'gold'])
+        ax.set_title('Bandit: Vulnerabilities by Severity')
+        ax.set_ylabel('Count')
+        plt.tight_layout()
+        plt.savefig('dashboard/bandit_severity.png')
+        plt.close()
     
-    # 1. Wykres dla Bandit
-    fig, ax = plt.subplots(figsize=(10, 6))
-    severities = ['High', 'Medium', 'Low']
-    counts = [bandit_data['high_severity'], bandit_data['medium_severity'], bandit_data['low_severity']]
-    colors = ['darkred', 'orange', 'yellow']
+    # Semgrep severity
+    semgrep_sev = [metrics['semgrep']['critical'], metrics['semgrep']['high'], 
+                   metrics['semgrep']['medium'], metrics['semgrep']['low']]
+    if sum(semgrep_sev) > 0:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        bars = ax.bar(['Critical', 'High', 'Medium', 'Low'], semgrep_sev, 
+                      color=['darkred', 'red', 'orange', 'gold'])
+        ax.set_title('Semgrep: Vulnerabilities by Severity')
+        ax.set_ylabel('Count')
+        plt.tight_layout()
+        plt.savefig('dashboard/semgrep_severity.png')
+        plt.close()
     
-    bars = ax.bar(severities, counts, color=colors)
-    ax.set_title('Bandit SAST Vulnerabilities by Severity')
-    ax.set_ylabel('Count')
-    ax.set_xlabel('Severity Level')
+    # Trivy FS severity
+    trivy_sev = [metrics['trivy_fs']['CRITICAL'], metrics['trivy_fs']['HIGH'], 
+                 metrics['trivy_fs']['MEDIUM'], metrics['trivy_fs']['LOW']]
+    if sum(trivy_sev) > 0:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        bars = ax.bar(['Critical', 'High', 'Medium', 'Low'], trivy_sev,
+                      color=['darkred', 'red', 'orange', 'gold'])
+        ax.set_title('Trivy Filesystem: Vulnerabilities by Severity')
+        ax.set_ylabel('Count')
+        plt.tight_layout()
+        plt.savefig('dashboard/trivy_fs_severity.png')
+        plt.close()
+
+def create_summary_table(metrics):
+    """Create summary table of all findings"""
+    os.makedirs('dashboard', exist_ok=True)
     
-    for bar, count in zip(bars, counts):
-        if count > 0:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                   str(count), ha='center', va='bottom')
+    data = []
     
-    plt.tight_layout()
-    plt.savefig('dashboard/bandit_vulns.png')
-    plt.close()
+    # SAST Tools
+    data.append(['Bandit (SAST)', metrics['bandit']['vulnerabilities'], 
+                 metrics['bandit']['high'], metrics['bandit']['medium'], metrics['bandit']['low']])
+    data.append(['Semgrep (SAST)', metrics['semgrep']['vulnerabilities'],
+                 metrics['semgrep']['high'], metrics['semgrep']['medium'], metrics['semgrep']['low']])
+    data.append(['SonarQube (SAST)', metrics['sonarqube']['vulnerabilities'],
+                 'N/A', 'N/A', 'N/A'])
     
-    # 2. Wykres dla Trivy FS
-    fig, ax = plt.subplots(figsize=(10, 6))
-    severities = list(trivy_data.keys())
-    counts = list(trivy_data.values())
-    colors = {'CRITICAL': 'darkred', 'HIGH': 'red', 'MEDIUM': 'orange', 'LOW': 'yellow', 'UNKNOWN': 'gray'}
-    bar_colors = [colors.get(s, 'blue') for s in severities]
+    # Secret Scanning
+    data.append(['Gitleaks (Secrets)', metrics['gitleaks']['total_leaks'], 'N/A', 'N/A', 'N/A'])
+    data.append(['TruffleHog (Secrets)', metrics['trufflehog']['total_secrets'], 'N/A', 'N/A', 'N/A'])
     
-    bars = ax.bar(severities, counts, color=bar_colors)
-    ax.set_title('Trivy Filesystem Scan Vulnerabilities')
-    ax.set_ylabel('Count')
-    ax.set_xlabel('Severity Level')
+    # SCA/Container
+    data.append(['Trivy FS (SCA)', metrics['trivy_fs']['total'],
+                 metrics['trivy_fs']['CRITICAL'], metrics['trivy_fs']['HIGH'], 
+                 metrics['trivy_fs']['MEDIUM']])
+    data.append(['Trivy Container', metrics['trivy_container']['total'],
+                 metrics['trivy_container']['CRITICAL'], metrics['trivy_container']['HIGH'],
+                 metrics['trivy_container']['MEDIUM']])
+    data.append(['Grype (Container)', metrics['grype']['total'],
+                 metrics['grype']['CRITICAL'], metrics['grype']['HIGH'],
+                 metrics['grype']['MEDIUM']])
     
-    for bar, count in zip(bars, counts):
-        if count > 0:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                   str(count), ha='center', va='bottom')
-    
-    plt.tight_layout()
-    plt.savefig('dashboard/trivy_fs_vulns.png')
-    plt.close()
-    
-    # 3. Wykres dla Container scan
-    fig, ax = plt.subplots(figsize=(10, 6))
-    severities = list(container_data.keys())
-    counts = list(container_data.values())
-    bar_colors = [colors.get(s, 'blue') for s in severities]
-    
-    bars = ax.bar(severities, counts, color=bar_colors)
-    ax.set_title('Container Image Vulnerabilities')
-    ax.set_ylabel('Count')
-    ax.set_xlabel('Severity Level')
-    
-    for bar, count in zip(bars, counts):
-        if count > 0:
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
-                   str(count), ha='center', va='bottom')
-    
-    plt.tight_layout()
-    plt.savefig('dashboard/container_vulns.png')
-    plt.close()
-    
-    # 4. Podsumowanie w formie tabeli
-    summary_data = {
-        'Tool': ['Bandit SAST', 'Trivy FS', 'Trivy Container', 'Gitleaks'],
-        'Critical': [0, trivy_data['CRITICAL'], container_data['CRITICAL'], 0],
-        'High': [bandit_data['high_severity'], trivy_data['HIGH'], container_data['HIGH'], 0],
-        'Medium': [bandit_data['medium_severity'], trivy_data['MEDIUM'], container_data['MEDIUM'], 0],
-        'Low': [bandit_data['low_severity'], trivy_data['LOW'], container_data['LOW'], gitleaks_data['total_leaks']]
-    }
-    
-    fig, ax = plt.subplots(figsize=(12, 4))
+    fig, ax = plt.subplots(figsize=(14, 8))
     ax.axis('tight')
     ax.axis('off')
     
-    table = ax.table(cellText=[[
-        summary_data['Tool'][i],
-        summary_data['Critical'][i],
-        summary_data['High'][i],
-        summary_data['Medium'][i],
-        summary_data['Low'][i]
-    ] for i in range(4)],
-    colLabels=['Tool', 'Critical', 'High', 'Medium', 'Low'],
-    cellLoc='center',
-    loc='center')
-    
+    columns = ['Tool', 'Total', 'Critical', 'High', 'Medium']
+    table = ax.table(cellText=data, colLabels=columns, cellLoc='center', loc='center')
     table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.2, 1.5)
+    table.set_fontsize(9)
+    table.scale(1.5, 1.8)
     
-    # Color coding
-    for i in range(4):
-        for j in range(5):
-            if j > 0:  # Skip tool name column
-                value = int(table[(i+1, j)].get_text().get_text())
-                if value > 0:
-                    if j == 1:  # Critical
-                        table[(i+1, j)].set_facecolor('#ffcccc')
-                    elif j == 2:  # High
-                        table[(i+1, j)].set_facecolor('#ffe6cc')
+    # Color coding for critical and high
+    for i, row in enumerate(data):
+        for j, val in enumerate(row):
+            if j == 2 and str(val) not in ['N/A', '0'] and int(val) if str(val).isdigit() else 0 > 0:
+                table[(i+1, j)].set_facecolor('#ffcccc')
+            elif j == 3 and str(val) not in ['N/A', '0'] and int(val) if str(val).isdigit() else 0 > 0:
+                table[(i+1, j)].set_facecolor('#ffe6cc')
     
-    plt.title('Security Findings Summary', pad=20, fontsize=14, fontweight='bold')
+    plt.title('Complete Security Findings Summary', pad=20, fontsize=14, fontweight='bold')
     plt.tight_layout()
     plt.savefig('dashboard/summary_table.png', bbox_inches='tight')
     plt.close()
+
+def generate_html_dashboard(metrics):
+    """Generate main HTML dashboard"""
     
-    # 5. Generuj główny dashboard HTML
+    total_vulns = (metrics['bandit']['vulnerabilities'] + 
+                   metrics['semgrep']['vulnerabilities'] +
+                   metrics['trivy_fs']['total'] + 
+                   metrics['trivy_container']['total'] +
+                   metrics['grype']['total'])
+    
+    total_critical = (metrics['trivy_fs']['CRITICAL'] + 
+                      metrics['trivy_container']['CRITICAL'] +
+                      metrics['grype']['CRITICAL'])
+    
+    total_secrets = metrics['gitleaks']['total_leaks'] + metrics['trufflehog']['total_secrets']
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Security Metrics Dashboard</title>
+        <title>DevSecOps Security Dashboard</title>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{ 
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
                 min-height: 100vh;
                 padding: 20px;
             }}
-            .container {{ 
-                max-width: 1400px; 
-                margin: 0 auto;
-            }}
+            .container {{ max-width: 1400px; margin: 0 auto; }}
             .header {{
-                background: white;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 border-radius: 15px;
                 padding: 30px;
                 margin-bottom: 30px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
                 text-align: center;
+                color: white;
             }}
-            .header h1 {{
-                color: #333;
-                font-size: 2.5em;
-                margin-bottom: 10px;
-            }}
-            .timestamp {{
-                color: #666;
-                font-size: 0.9em;
-            }}
+            .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
+            .timestamp {{ opacity: 0.9; font-size: 0.9em; }}
             .stats-grid {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
                 gap: 20px;
                 margin-bottom: 30px;
             }}
             .stat-card {{
                 background: white;
                 border-radius: 15px;
-                padding: 25px;
+                padding: 20px;
                 text-align: center;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
                 transition: transform 0.3s;
             }}
-            .stat-card:hover {{
-                transform: translateY(-5px);
-            }}
-            .stat-number {{
-                font-size: 2.5em;
-                font-weight: bold;
-                color: #667eea;
-                margin: 10px 0;
-            }}
-            .stat-label {{
-                color: #666;
-                font-size: 0.9em;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-            }}
+            .stat-card:hover {{ transform: translateY(-5px); }}
+            .stat-number {{ font-size: 2.5em; font-weight: bold; margin: 10px 0; }}
+            .stat-number.critical {{ color: #dc3545; }}
+            .stat-number.secrets {{ color: #fd7e14; }}
+            .stat-number.total {{ color: #667eea; }}
+            .stat-label {{ color: #666; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }}
             .card {{
                 background: white;
                 border-radius: 15px;
@@ -500,26 +458,27 @@ def create_visualizations():
             }}
             .grid-2 {{
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
                 gap: 30px;
                 margin-bottom: 30px;
             }}
-            img {{
-                width: 100%;
-                height: auto;
-                border-radius: 10px;
-            }}
-            .severity-badge {{
+            img {{ width: 100%; height: auto; border-radius: 10px; }}
+            .badge {{
                 display: inline-block;
-                padding: 3px 8px;
-                border-radius: 5px;
-                font-size: 0.8em;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 0.75em;
                 font-weight: bold;
             }}
-            .critical {{ background: #dc3545; color: white; }}
-            .high {{ background: #fd7e14; color: white; }}
-            .medium {{ background: #ffc107; color: #333; }}
-            .low {{ background: #28a745; color: white; }}
+            .badge.critical {{ background: #dc3545; color: white; }}
+            .badge.high {{ background: #fd7e14; color: white; }}
+            .badge.medium {{ background: #ffc107; color: #333; }}
+            .footer {{
+                text-align: center;
+                padding: 20px;
+                color: #888;
+                font-size: 0.8em;
+            }}
             @media (max-width: 768px) {{
                 .grid-2 {{ grid-template-columns: 1fr; }}
                 .header h1 {{ font-size: 1.5em; }}
@@ -529,81 +488,88 @@ def create_visualizations():
     <body>
         <div class="container">
             <div class="header">
-                <h1>🛡️ Security Metrics Dashboard</h1>
+                <h1>🛡️ DevSecOps Security Dashboard</h1>
                 <div class="timestamp">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</div>
-                <div class="timestamp">Pipeline Run: {os.getenv('GITHUB_RUN_ID', 'N/A')}</div>
-                <div class="timestamp">Branch: {os.getenv('GITHUB_REF_NAME', 'N/A')}</div>
+                <div class="timestamp">Run ID: {metrics['run_id']} | Branch: {metrics['branch']}</div>
             </div>
             
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Total Vulnerabilities</div>
-                    <div class="stat-number">{sum(trivy_data.values()) + sum(container_data.values()) + bandit_data['vulnerabilities']}</div>
+                    <div class="stat-number total">{total_vulns}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Critical Issues</div>
-                    <div class="stat-number" style="color: #dc3545;">{trivy_data['CRITICAL'] + container_data['CRITICAL']}</div>
+                    <div class="stat-number critical">{total_critical}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Secrets Found</div>
-                    <div class="stat-number" style="color: #fd7e14;">{gitleaks_data['total_leaks']}</div>
+                    <div class="stat-number secrets">{total_secrets}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Tools Used</div>
-                    <div class="stat-number">4</div>
+                    <div class="stat-label">SAST Tools</div>
+                    <div class="stat-number total">3</div>
                 </div>
             </div>
             
             <div class="grid-2">
                 <div class="card">
-                    <h2>🐍 Bandit SAST Results</h2>
-                    <img src="bandit_vulns.png" alt="Bandit Vulnerabilities">
+                    <h2>🐍 SAST Tools Comparison</h2>
+                    <img src="sast_comparison.png" alt="SAST Comparison">
                     <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> Found {bandit_data['vulnerabilities']} vulnerabilities
-                        ({bandit_data['high_severity']} high, {bandit_data['medium_severity']} medium, {bandit_data['low_severity']} low)
+                        <strong>Bandit:</strong> {metrics['bandit']['vulnerabilities']} vulns<br>
+                        <strong>Semgrep:</strong> {metrics['semgrep']['vulnerabilities']} vulns<br>
+                        <strong>SonarQube:</strong> {metrics['sonarqube']['vulnerabilities']} vulns
                     </p>
                 </div>
                 
                 <div class="card">
-                    <h2>📊 SonarQube Cloud Results</h2>
+                    <h2>🔑 Secret Scanning Comparison</h2>
+                    <img src="secret_comparison.png" alt="Secret Scanning Comparison">
                     <p style="margin-top: 15px;">
-                        <strong>Vulnerabilities:</strong> {sonarqube_data.get('vulnerabilities', 0)}<br>
-                        <strong>Bugs:</strong> {sonarqube_data.get('bugs', 0)}<br>
-                        <strong>Code Smells:</strong> {sonarqube_data.get('code_smells', 0)}<br>
-                        <strong>Security Hotspots:</strong> {sonarqube_data.get('security_hotspots', 0)}<br>
-                        <strong>Coverage:</strong> {sonarqube_data.get('coverage', 0)}%
+                        <strong>Gitleaks:</strong> {metrics['gitleaks']['total_leaks']} secrets<br>
+                        <strong>TruffleHog:</strong> {metrics['trufflehog']['total_secrets']} secrets
                     </p>
                 </div>
             </div>
             
             <div class="grid-2">
                 <div class="card">
-                    <h2>📁 Trivy Filesystem Scan</h2>
-                    <img src="trivy_fs_vulns.png" alt="Trivy FS Vulnerabilities">
+                    <h2>🐳 Container Scanning Comparison</h2>
+                    <img src="container_comparison.png" alt="Container Comparison">
                     <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> {sum(trivy_data.values())} total issues
-                        (Critical: {trivy_data['CRITICAL']}, High: {trivy_data['HIGH']}, 
-                        Medium: {trivy_data['MEDIUM']}, Low: {trivy_data['LOW']})
+                        <strong>Trivy Container:</strong> {metrics['trivy_container']['total']} total 
+                        (Critical: {metrics['trivy_container']['CRITICAL']})<br>
+                        <strong>Grype:</strong> {metrics['grype']['total']} total 
+                        (Critical: {metrics['grype']['CRITICAL']})
                     </p>
                 </div>
                 
                 <div class="card">
-                    <h2>🐳 Container Image Scan</h2>
-                    <img src="container_vulns.png" alt="Container Vulnerabilities">
+                    <h2>📊 Severity Distribution</h2>
+                    <img src="bandit_severity.png" alt="Bandit Severity">
                     <p style="margin-top: 15px;">
-                        <strong>Summary:</strong> {sum(container_data.values())} total issues
-                        (Critical: {container_data['CRITICAL']}, High: {container_data['HIGH']}, 
-                        Medium: {container_data['MEDIUM']}, Low: {container_data['LOW']})
+                        <strong>Bandit High:</strong> {metrics['bandit']['high']} | 
+                        <strong>Semgrep Critical:</strong> {metrics['semgrep']['critical']}
                     </p>
                 </div>
             </div>
             
             <div class="card">
-                <h2>🔑 Secrets Found</h2>
-                <img src="summary_table.png" alt="Summary Table" style="max-width: 100%;">
-                <p style="margin-top: 15px;">
-                    <strong>Total secrets:</strong> {gitleaks_data['total_leaks']} found
-                </p>
+                <h2>📋 Complete Summary - All Tools</h2>
+                <img src="summary_table.png" alt="Summary Table">
+            </div>
+            
+            <div class="card">
+                <h2>🔐 Detailed Secrets Found</h2>
+                <ul style="margin-top: 15px;">
+                    {' '.join([f'<li><strong>{s.get("description", "Secret")}</strong> - File: {s.get("file", "unknown")}:{s.get("line", "?")}</li>' for s in metrics['gitleaks'].get('secrets', [])[:5]])}
+                    {f'<li>... and {metrics["trufflehog"]["total_secrets"]} more from TruffleHog</li>' if metrics['trufflehog']['total_secrets'] > 0 else ''}
+                </ul>
+            </div>
+            
+            <div class="footer">
+                Generated by DevSecOps Pipeline | Tools: Bandit, Semgrep, SonarQube, Gitleaks, TruffleHog, Trivy, Grype
             </div>
         </div>
     </body>
@@ -615,15 +581,47 @@ def create_visualizations():
     
     print("✅ Dashboard generated successfully!")
     print(f"📁 Dashboard location: dashboard/index.html")
-    print(f"📊 Files created:")
-    for file in os.listdir('dashboard'):
-        print(f"   - {file}")
 
-if __name__ == "__main__":
+def save_metrics_json(metrics):
+    """Save all metrics to JSON file for reference"""
+    with open('dashboard/metrics.json', 'w') as f:
+        json.dump(metrics, f, indent=2)
+    print("✅ Metrics saved to dashboard/metrics.json")
+
+def main():
+    """Main function"""
+    print("=" * 50)
+    print("🚀 Generating Security Metrics Dashboard")
+    print("=" * 50)
+    
     try:
-        create_visualizations()
+        # Load all metrics
+        metrics = load_tool_metrics()
+        
+        # Create dashboard directory
+        os.makedirs('dashboard', exist_ok=True)
+        
+        # Create all charts
+        create_comparison_charts(metrics)
+        create_severity_charts(metrics)
+        create_summary_table(metrics)
+        
+        # Generate HTML dashboard
+        generate_html_dashboard(metrics)
+        
+        # Save metrics JSON
+        save_metrics_json(metrics)
+        
+        print("\n" + "=" * 50)
+        print("✅ Dashboard generation completed successfully!")
+        print("📊 Check the 'dashboard' directory for output files")
+        print("=" * 50)
+        
     except Exception as e:
         print(f"❌ Error generating dashboard: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()
