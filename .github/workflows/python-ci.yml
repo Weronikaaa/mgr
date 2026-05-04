@@ -356,6 +356,8 @@ jobs:
     needs: deploy
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Start ZAP timer
         id: zap-start
         run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
