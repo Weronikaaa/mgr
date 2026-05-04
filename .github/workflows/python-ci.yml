@@ -350,10 +350,45 @@ jobs:
       - name: End deploy timer
         run: echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
 
+# ================= DAST (OWASP ZAP) =================
+  dast-zap:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
+      - name: Start ZAP timer
+        id: zap-start
+        run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
+
+      - name: Run OWASP ZAP baseline scan
+        run: |
+          docker run --rm \
+            -v $(pwd):/zap/wrk/:rw \
+            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            -t https://mgr.onrender.com \
+            -J zap-report.json || true
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: zap-report.json
+
+      - name: End ZAP timer
+        id: zap-end
+        run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
+
+      - name: Calculate ZAP metrics
+        run: |
+          python scripts/calculate_tool_metrics.py \
+            --tool zap \
+            --start ${{ steps.zap-start.outputs.time }} \
+            --end ${{ steps.zap-end.outputs.time }}
+            
 # ================= SMOKE TESTS =================
   smoke-tests:
     runs-on: ubuntu-latest
-    needs: deploy
+    needs: dast-zap
 
     steps:
       - uses: actions/checkout@v4
@@ -366,7 +401,7 @@ jobs:
 # ================= METRICS =================
   metrics:
     runs-on: ubuntu-latest
-    needs: [sast-bandit, sast-sonarqube, sast-semgrep, gitleaks, trufflehog, sca-trivy, grype, container-scan, smoke-tests]
+    needs: [sast-bandit, sast-sonarqube, sast-semgrep, gitleaks, trufflehog, sca-trivy, grype, container-scan, dast-zap, smoke-tests]
   
     steps:
       - uses: actions/checkout@v4
@@ -418,6 +453,7 @@ jobs:
           find artifacts/ -name "gitleaks*.json" -exec cp {} metrics/ \;
           find artifacts/ -name "trufflehog*.json" -exec cp {} metrics/ \;
           find artifacts/ -name "grype*.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "zap-report.json" -exec cp {} metrics/ \;
           
           echo "=== Files in metrics/ ==="
           ls -la metrics/
