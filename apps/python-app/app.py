@@ -1,4 +1,7 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, Response, g
+from prometheus_client import Counter, Histogram, generate_latest
+import time
+
 import sqlite3
 import subprocess
 import pickle
@@ -6,6 +9,16 @@ import os
 import hashlib
 
 app = Flask(__name__)
+
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests"
+)
+
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency"
+)
 
 # =========================
 # HARD CODED SECRETS
@@ -17,6 +30,19 @@ SECRET_TOKEN = "super-secret-token"
 # =========================
 # HOME
 # =========================
+@app.before_request
+def before_request():
+    g.start_time = time.time()
+
+
+@app.after_request
+def after_request(response):
+    REQUEST_COUNT.inc()
+    REQUEST_LATENCY.observe(
+        time.time() - g.start_time
+    )
+    return response
+    
 @app.route("/")
 def home():
     return """
@@ -137,7 +163,14 @@ def debug():
 @app.route("/token")
 def token():
     return str(hash("static-seed"))  # przewidywalne
-
+    
+@app.route("/metrics")
+def metrics():
+    return Response(
+        generate_latest(),
+        mimetype="text/plain"
+    )
+    
 # =========================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
