@@ -5,6 +5,11 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
+EXPOSE 5000
+
 USER root
+
+ENV FLASK_ENV=development
+ENV DEBUG=true
 
 CMD ["python", "app.py"]
