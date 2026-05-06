@@ -63,8 +63,6 @@ def extract_cwes(text):
     text = str(text).lower()
     detected = set()
 
-    print("SEMgrep detected:", parse_semgrep())
-
     for cwe, vuln_id in CWE_MAP.items():
 
         cwe_id = cwe.lower().split(":")[0]   # 🔥 FIX
@@ -171,6 +169,9 @@ def main():
 
     ground_truth_raw = load_json(GROUND_TRUTH_FILE)
     ground_truth = ground_truth_raw.get("vulnerabilities", {})
+
+    detected = parse_semgrep()
+print("SEMgrep detected:", detected)
 
     tools = {
         "bandit": parse_bandit,
