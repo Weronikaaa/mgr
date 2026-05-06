@@ -64,7 +64,10 @@ def extract_cwes(text):
     detected = set()
 
     for cwe, vuln_id in CWE_MAP.items():
-        if cwe.lower() in text:
+
+        cwe_id = cwe.lower().split(":")[0]   # 🔥 FIX
+
+        if cwe_id in text:
             detected.add(vuln_id)
 
     return detected
