@@ -105,10 +105,14 @@ def parse_semgrep():
 
     for issue in data.get("results", []):
 
+        extra = issue.get("extra", {})
+        metadata = extra.get("metadata", {})
+
         text = (
             issue.get("check_id", "")
-            + issue.get("message", "")
-            + str(issue.get("extra", {}))
+            + extra.get("message", "")
+            + str(metadata.get("cwe", []))
+            + str(metadata.get("owasp", []))
         )
 
         findings |= detect_vulnerabilities(text)
