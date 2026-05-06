@@ -63,6 +63,8 @@ def extract_cwes(text):
     text = str(text).lower()
     detected = set()
 
+    print("SEMgrep detected:", parse_semgrep())
+
     for cwe, vuln_id in CWE_MAP.items():
 
         cwe_id = cwe.lower().split(":")[0]   # 🔥 FIX
@@ -114,8 +116,13 @@ def parse_semgrep():
     findings = set()
 
     for issue in data.get("results", []):
+
         cwe_list = issue.get("extra", {}).get("metadata", {}).get("cwe", [])
-        text = " ".join(cwe_list) + " " + issue.get("check_id", "")
+
+        text = issue.get("check_id", "")
+
+        # 🔥 dodaj CWE bezpośrednio
+        text += " " + " ".join(cwe_list)
 
         findings |= extract_cwes(text)
 
