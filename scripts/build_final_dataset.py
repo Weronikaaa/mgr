@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 
 OUTPUT_FILE = "final_experiment_dataset.json"
-GROUND_TRUTH_FILE = "ground_truth.json"
+GROUND_TRUTH_FILE = "data/ground_truth.json"
 
 
 # =========================
@@ -18,21 +18,23 @@ def load_json(path):
 
 
 # =========================
-# DETECTION FUNCTION (mapping rules)
+# IMPROVED RULE-BASED MAPPING (ACADEMIC VERSION)
 # =========================
 RULES = {
-    "V01": ["sql", "execute", "sqlite"],
-    "V02": ["subprocess", "shell=True", "command injection"],
-    "V03": ["eval"],
-    "V04": ["pickle"],
-    "V05": ["md5"],
-    "V06": ["path traversal", "open("],
-    "V07": ["xss", "html"],
-    "V08": ["redirect"],
-    "V09": ["auth", "authorization"],
-    "V10": ["upload"],
-    "V11": ["os.environ", "environment"],
-    "V12": ["token", "debug", "hash"]
+    "V01": ["hardcoded", "secret", "api key", "password"],
+    "V02": ["sql", "sql injection", "cwe-89", "execute", "sqlite"],
+    "V03": ["command injection", "subprocess", "cwe-78", "shell=true"],
+    "V04": ["eval", "code injection", "cwe-94"],
+    "V05": ["pickle", "deserialization", "cwe-502"],
+    "V06": ["md5", "weak hash", "cwe-327"],
+    "V07": ["path traversal", "cwe-22", "open("],
+    "V08": ["xss", "cross-site scripting", "html"],
+    "V09": ["redirect", "open redirect", "cwe-601"],
+    "V10": ["access control", "authorization", "broken access"],
+    "V11": ["upload", "file upload", "cwe-434"],
+    "V12": ["information disclosure", "debug", "os.environ", "cwe-200"],
+    "V13": ["token", "predictable", "random", "hash"],
+    "V14": ["debug mode", "flask debug", "cwe-489"]
 }
 
 
@@ -54,7 +56,7 @@ def detect_vulnerabilities(text):
 
 
 # =========================
-# PARSERS (RAW REPORTS ONLY)
+# PARSERS (RAW REPORTS)
 # =========================
 
 def parse_bandit():
@@ -62,11 +64,11 @@ def parse_bandit():
     findings = set()
 
     for issue in data.get("results", []):
-        text = (
-            issue.get("issue_text", "") +
-            issue.get("test_name", "") +
+        text = " ".join([
+            issue.get("issue_text", ""),
+            issue.get("test_name", ""),
             issue.get("test_id", "")
-        )
+        ])
         findings |= detect_vulnerabilities(text)
 
     return findings
@@ -77,10 +79,10 @@ def parse_semgrep():
     findings = set()
 
     for issue in data.get("results", []):
-        text = (
-            issue.get("check_id", "") +
+        text = " ".join([
+            issue.get("check_id", ""),
             issue.get("extra", {}).get("message", "")
-        )
+        ])
         findings |= detect_vulnerabilities(text)
 
     return findings
@@ -88,11 +90,20 @@ def parse_semgrep():
 
 def parse_sonarqube():
     data = load_json("sonarqube-metrics.json")
-    return detect_vulnerabilities(str(data))
+
+    findings = set()
+
+    measures = data.get("component", {}).get("measures", [])
+
+    for m in measures:
+        text = m.get("metric", "")
+        findings |= detect_vulnerabilities(text)
+
+    return findings
 
 
 # =========================
-# METRICS CALCULATION
+# METRICS
 # =========================
 def calculate_metrics(detected, ground_truth):
     gt_set = set(ground_truth.keys())
@@ -123,7 +134,7 @@ def main():
 
     ground_truth_raw = load_json(GROUND_TRUTH_FILE)
     ground_truth = ground_truth_raw.get("vulnerabilities", {})
-    
+
     tools = {
         "bandit": parse_bandit,
         "semgrep": parse_semgrep,
@@ -135,10 +146,12 @@ def main():
             "project": "DevSecOps CI/CD Security Evaluation",
             "generated_at": datetime.now().isoformat()
         },
+
         "ground_truth": {
             "total_vulnerabilities": len(ground_truth),
             "items": list(ground_truth.keys())
         },
+
         "sast": {}
     }
 
@@ -149,7 +162,7 @@ def main():
     with open(OUTPUT_FILE, "w") as f:
         json.dump(results, f, indent=2)
 
-    print("✅ FINAL DATASET GENERATED (clean evaluation)")
+    print("✅ FINAL DATASET GENERATED")
     print(f"📁 {OUTPUT_FILE}")
 
 
