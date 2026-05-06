@@ -483,26 +483,35 @@ jobs:
           force_orphan: true
           keep_files: false
 
-
+# ================= EFFECTIVENESS =================
   effectiveness:
     runs-on: ubuntu-latest
-    needs: [sast-bandit, sast-sonarqube, sast-semgrep]
-  
+    needs: [sast-bandit, sast-semgrep, sast-sonarqube]
+
     steps:
-  
+
       - uses: actions/checkout@v4
-  
-      - uses: actions/download-artifact@v4
-  
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Copy reports
+        run: |
+          find artifacts/ -name "bandit-report.json" -exec cp {} . \;
+          find artifacts/ -name "semgrep-report.json" -exec cp {} . \;
+          find artifacts/ -name "sonarqube*" -exec cp {} . \;
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-  
-      - name: Run evaluator
+
+      - name: Run effectiveness evaluation
         run: |
           python scripts/evaluate_recall_precision.py
-  
+
       - name: Upload effectiveness metrics
         uses: actions/upload-artifact@v4
         with:
