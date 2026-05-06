@@ -37,6 +37,37 @@ RULES = {
     "V14": ["debug mode", "flask debug", "cwe-489"]
 }
 
+CWE_MAP = {
+    "CWE-798": "V01",
+    "CWE-89": "V02",
+    "CWE-78": "V03",
+    "CWE-94": "V04",
+    "CWE-502": "V05",
+    "CWE-327": "V06",
+    "CWE-22": "V07",
+    "CWE-79": "V08",
+    "CWE-601": "V09",
+    "CWE-284": "V10",
+    "CWE-434": "V11",
+    "CWE-200": "V12",
+    "CWE-330": "V13",
+    "CWE-489": "V14",
+    "CWE-1104": "V15",
+    "CWE-250": "V18",
+    "CWE-693": "V19",
+    "CWE-494": "V20",
+    "CWE-1008": "V21",
+    "CWE-16": "V23"
+}
+def extract_cwes(text):
+    text = str(text).lower()
+    detected = set()
+
+    for cwe, vuln_id in CWE_MAP.items():
+        if cwe.lower() in text:
+            detected.add(vuln_id)
+
+    return detected
 
 def normalize(text):
     return str(text).lower()
@@ -65,11 +96,12 @@ def parse_bandit():
 
     for issue in data.get("results", []):
         text = " ".join([
-            issue.get("issue_text", ""),
             issue.get("test_name", ""),
-            issue.get("test_id", "")
+            issue.get("test_id", ""),
+            str(issue.get("issue_cwe", ""))
         ])
-        findings |= detect_vulnerabilities(text)
+
+        findings |= extract_cwes(text)
 
     return findings
 
@@ -79,11 +111,10 @@ def parse_semgrep():
     findings = set()
 
     for issue in data.get("results", []):
-        text = " ".join([
-            issue.get("check_id", ""),
-            issue.get("extra", {}).get("message", "")
-        ])
-        findings |= detect_vulnerabilities(text)
+        cwe_list = issue.get("extra", {}).get("metadata", {}).get("cwe", [])
+        text = " ".join(cwe_list) + " " + issue.get("check_id", "")
+
+        findings |= extract_cwes(text)
 
     return findings
 
@@ -91,30 +122,27 @@ def parse_semgrep():
 def parse_sonarqube():
     data = load_json("sonarqube-metrics.json")
 
-    findings = set()
+    text = ""
 
-    measures = data.get("component", {}).get("measures", [])
+    for m in data.get("component", {}).get("measures", []):
+        text += str(m.get("metric", "")) + " " + str(m.get("value", ""))
 
-    for m in measures:
-        text = m.get("metric", "")
-        findings |= detect_vulnerabilities(text)
-
-    return findings
+    return extract_cwes(text)
 
 
 # =========================
 # METRICS
 # =========================
 def calculate_metrics(detected, ground_truth):
-    gt_set = set(ground_truth.keys())
+    gt = set(ground_truth.keys())
 
-    tp = len(detected & gt_set)
-    fp = len(detected - gt_set)
-    fn = len(gt_set - detected)
+    tp = len(detected & gt)
+    fp = len(detected - gt)
+    fn = len(gt - detected)
 
-    precision = tp / (tp + fp) if (tp + fp) else 0
-    recall = tp / len(gt_set) if gt_set else 0
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) else 0
+    precision = tp / (tp + fp) if tp + fp else 0
+    recall = tp / len(gt) if gt else 0
+    f1 = (2 * precision * recall / (precision + recall)) if precision + recall else 0
 
     return {
         "tp": tp,
@@ -125,7 +153,6 @@ def calculate_metrics(detected, ground_truth):
         "f1": round(f1, 3),
         "detected": sorted(list(detected))
     }
-
 
 # =========================
 # MAIN
