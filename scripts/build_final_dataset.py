@@ -121,8 +121,9 @@ def calculate_metrics(detected, ground_truth):
 # =========================
 def main():
 
-    ground_truth = load_json(GROUND_TRUTH_FILE)
-
+    ground_truth_raw = load_json(GROUND_TRUTH_FILE)
+    ground_truth = ground_truth_raw.get("vulnerabilities", {})
+    
     tools = {
         "bandit": parse_bandit,
         "semgrep": parse_semgrep,
