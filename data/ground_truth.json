@@ -1,0 +1,124 @@
+{
+  "project": "DevSecOps CI/CD Security Evaluation",
+
+  "vulnerabilities": {
+    "V01": {
+      "name": "Hardcoded Secrets",
+      "cwe": "CWE-798",
+      "owasp": "A07"
+    },
+    "V02": {
+      "name": "SQL Injection",
+      "cwe": "CWE-89",
+      "owasp": "A03"
+    },
+    "V03": {
+      "name": "Command Injection",
+      "cwe": "CWE-78",
+      "owasp": "A03"
+    },
+    "V04": {
+      "name": "Code Injection (eval)",
+      "cwe": "CWE-94",
+      "owasp": "A03"
+    },
+    "V05": {
+      "name": "Unsafe Deserialization (pickle)",
+      "cwe": "CWE-502",
+      "owasp": "A08"
+    },
+    "V06": {
+      "name": "Weak Hash (MD5)",
+      "cwe": "CWE-327",
+      "owasp": "A02"
+    },
+    "V07": {
+      "name": "Path Traversal",
+      "cwe": "CWE-22",
+      "owasp": "A01"
+    },
+    "V08": {
+      "name": "Cross-Site Scripting",
+      "cwe": "CWE-79",
+      "owasp": "A03"
+    },
+    "V09": {
+      "name": "Open Redirect",
+      "cwe": "CWE-601",
+      "owasp": "A01"
+    },
+    "V10": {
+      "name": "Broken Access Control",
+      "cwe": "CWE-284",
+      "owasp": "A01"
+    },
+    "V11": {
+      "name": "Insecure File Upload",
+      "cwe": "CWE-434",
+      "owasp": "A05"
+    },
+    "V12": {
+      "name": "Information Disclosure",
+      "cwe": "CWE-200",
+      "owasp": "A01"
+    },
+
+    "V13": {
+      "name": "Predictable Token",
+      "cwe": "CWE-330",
+      "owasp": "A02"
+    },
+    "V14": {
+      "name": "Debug Mode Enabled",
+      "cwe": "CWE-489",
+      "owasp": "A05"
+    },
+
+    "V15": {
+      "name": "Outdated Flask",
+      "cwe": "CWE-1104",
+      "owasp": "A06"
+    },
+    "V16": {
+      "name": "Outdated Requests",
+      "cwe": "CWE-1104",
+      "owasp": "A06"
+    },
+
+    "V17": {
+      "name": "Outdated Base Image",
+      "cwe": "CWE-1104",
+      "owasp": "A06"
+    },
+    "V18": {
+      "name": "Root User",
+      "cwe": "CWE-250",
+      "owasp": "A05"
+    },
+    "V19": {
+      "name": "Missing Healthcheck",
+      "cwe": "CWE-693",
+      "owasp": "A05"
+    },
+    "V20": {
+      "name": "Missing Image Pinning",
+      "cwe": "CWE-494",
+      "owasp": "A08"
+    },
+    "V21": {
+      "name": "Non-Minimal Container",
+      "cwe": "CWE-1008",
+      "owasp": "A05"
+    },
+    "V22": {
+      "name": "Missing Security Headers",
+      "cwe": "CWE-693",
+      "owasp": "A05"
+    },
+    "V23": {
+      "name": "Missing .dockerignore",
+      "cwe": "CWE-16",
+      "owasp": "A05"
+    }
+  }
+}
