@@ -21,10 +21,12 @@ def main():
             "generated_at": datetime.now().isoformat()
         },
        
-        "ground_truth": {
-            "total_vulnerabilities": 23
-        },
+        ground_truth = load_json("ground_truth.json")
 
+"ground_truth": {
+    "total_vulnerabilities": len(ground_truth),
+    "items": list(ground_truth.keys())
+},
         "pipeline_breakdown": {
             "build": load_json("metrics/build.json").get("duration_sec", 0),
             "sast": load_json("metrics/sast_total.json").get("duration_sec", 0),
