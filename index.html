@@ -1,0 +1,179 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DevSecOps Security Dashboard</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                min-height: 100vh;
+                padding: 20px;
+            }
+            .container { max-width: 1400px; margin: 0 auto; }
+            .header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 15px;
+                padding: 30px;
+                margin-bottom: 30px;
+                text-align: center;
+                color: white;
+            }
+            .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+            .timestamp { opacity: 0.9; font-size: 0.9em; }
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+            .stat-card {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                text-align: center;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                transition: transform 0.3s;
+            }
+            .stat-card:hover { transform: translateY(-5px); }
+            .stat-number { font-size: 2.5em; font-weight: bold; margin: 10px 0; }
+            .stat-number.critical { color: #dc3545; }
+            .stat-number.secrets { color: #fd7e14; }
+            .stat-number.total { color: #667eea; }
+            .stat-label { color: #666; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; }
+            .card {
+                background: white;
+                border-radius: 15px;
+                padding: 25px;
+                margin-bottom: 30px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            }
+            .card h2 {
+                color: #333;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                border-bottom: 3px solid #667eea;
+                display: inline-block;
+            }
+            .grid-2 {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+                gap: 30px;
+                margin-bottom: 30px;
+            }
+            img { width: 100%; height: auto; border-radius: 10px; }
+            .badge {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 0.75em;
+                font-weight: bold;
+            }
+            .badge.critical { background: #dc3545; color: white; }
+            .badge.high { background: #fd7e14; color: white; }
+            .badge.medium { background: #ffc107; color: #333; }
+            .footer {
+                text-align: center;
+                padding: 20px;
+                color: #888;
+                font-size: 0.8em;
+            }
+            @media (max-width: 768px) {
+                .grid-2 { grid-template-columns: 1fr; }
+                .header h1 { font-size: 1.5em; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🛡️ DevSecOps Security Dashboard</h1>
+                <div class="timestamp">Generated: 2026-05-06 20:48:09</div>
+                <div class="timestamp">Run ID: 25460100054 | Branch: main</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Vulnerabilities</div>
+                    <div class="stat-number total">9188</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Critical Issues</div>
+                    <div class="stat-number critical">380</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Secrets Found</div>
+                    <div class="stat-number secrets">5</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">SAST Tools</div>
+                    <div class="stat-number total">3</div>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <h2>🐍 SAST Tools Comparison</h2>
+                    <img src="sast_comparison.png" alt="SAST Comparison">
+                    <p style="margin-top: 15px;">
+                        <strong>Bandit:</strong> 12 vulns<br>
+                        <strong>Semgrep:</strong> 22 vulns<br>
+                        <strong>SonarQube:</strong> 12 vulns
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h2>🔑 Secret Scanning Comparison</h2>
+                    <img src="secret_comparison.png" alt="Secret Scanning Comparison">
+                    <p style="margin-top: 15px;">
+                        <strong>Gitleaks:</strong> 4 secrets<br>
+                        <strong>TruffleHog:</strong> 1 secrets
+                    </p>
+                </div>
+            </div>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <h2>🐳 Container Scanning Comparison</h2>
+                    <img src="container_comparison.png" alt="Container Comparison">
+                    <p style="margin-top: 15px;">
+                        <strong>Trivy Container:</strong> 6264 total 
+                        (Critical: 186)<br>
+                        <strong>Grype:</strong> 2883 total 
+                        (Critical: 194)
+                    </p>
+                </div>
+                
+                <div class="card">
+                    <h2>📊 Severity Distribution</h2>
+                    <img src="bandit_severity.png" alt="Bandit Severity">
+                    <p style="margin-top: 15px;">
+                        <strong>Bandit High:</strong> 3 | 
+                        <strong>Semgrep Critical:</strong> 10
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📋 Complete Summary - All Tools</h2>
+                <img src="summary_table.png" alt="Summary Table">
+            </div>
+            
+            <div class="card">
+                <h2>🔐 Detailed Secrets Found</h2>
+                <ul style="margin-top: 15px;">
+                    <li><strong>Generic API Key</strong> - File: apps/python-app/app.py:22</li> <li><strong>Generic API Key</strong> - File: python-app/app.py:22</li> <li><strong>Generic API Key</strong> - File: mgr/python-app/app.py:22</li> <li><strong>Generic API Key</strong> - File: mgr/python-app/app.py:22</li>
+                    <li>... and 1 more from TruffleHog</li>
+                </ul>
+            </div>
+            
+            <div class="footer">
+                Generated by DevSecOps Pipeline | Tools: Bandit, Semgrep, SonarQube, Gitleaks, TruffleHog, Trivy, Grype
+            </div>
+        </div>
+    </body>
+    </html>
+    

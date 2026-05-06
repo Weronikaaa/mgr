@@ -1,0 +1,80 @@
+{
+  "bandit": {
+    "vulnerabilities": 12,
+    "high": 3,
+    "medium": 5,
+    "low": 4
+  },
+  "semgrep": {
+    "vulnerabilities": 22,
+    "critical": 10,
+    "high": 12,
+    "medium": 0,
+    "low": 0
+  },
+  "sonarqube": {
+    "vulnerabilities": 12,
+    "bugs": 0,
+    "code_smells": 12,
+    "coverage": 0.0,
+    "security_hotspots": 8
+  },
+  "gitleaks": {
+    "total_leaks": 4,
+    "secrets": [
+      {
+        "file": "apps/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "mgr/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "mgr/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      }
+    ]
+  },
+  "trufflehog": {
+    "total_secrets": 1,
+    "detectors": [
+      "Github"
+    ],
+    "critical": 0,
+    "high": 0,
+    "medium": 1
+  },
+  "trivy_fs": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 4,
+    "LOW": 1,
+    "total": 7
+  },
+  "trivy_container": {
+    "CRITICAL": 186,
+    "HIGH": 1574,
+    "MEDIUM": 3367,
+    "LOW": 1137,
+    "total": 6264
+  },
+  "grype": {
+    "CRITICAL": 194,
+    "HIGH": 767,
+    "MEDIUM": 833,
+    "LOW": 1089,
+    "total": 2883
+  },
+  "timestamp": "2026-05-06T20:48:08.856085",
+  "run_id": "25460100054",
+  "branch": "main"
+}
