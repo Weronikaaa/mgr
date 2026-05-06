@@ -1,0 +1,86 @@
+{
+  "V1": {
+    "name": "SQL Injection",
+    "endpoint": "/user",
+    "owasp": "A03:2021 – Injection",
+    "cwe": "CWE-89",
+    "description": "Unsanitized input used in SQL query string concatenation"
+  },
+  "V2": {
+    "name": "Command Injection",
+    "endpoint": "/ping",
+    "owasp": "A03:2021 – Injection",
+    "cwe": "CWE-78",
+    "description": "User input passed directly to shell command"
+  },
+  "V3": {
+    "name": "Code Injection (Eval)",
+    "endpoint": "/calc",
+    "owasp": "A03:2021 – Injection",
+    "cwe": "CWE-94",
+    "description": "Use of unsafe eval() on user input"
+  },
+  "V4": {
+    "name": "Insecure Deserialization",
+    "endpoint": "/load",
+    "owasp": "A08:2021 – Software and Data Integrity Failures",
+    "cwe": "CWE-502",
+    "description": "pickle.loads on untrusted input"
+  },
+  "V5": {
+    "name": "Weak Cryptographic Hash",
+    "endpoint": "/hash",
+    "owasp": "A02:2021 – Cryptographic Failures",
+    "cwe": "CWE-328",
+    "description": "Use of MD5 for password hashing"
+  },
+  "V6": {
+    "name": "Path Traversal",
+    "endpoint": "/file",
+    "owasp": "A01:2021 – Broken Access Control",
+    "cwe": "CWE-22",
+    "description": "User-controlled file path without sanitization"
+  },
+  "V7": {
+    "name": "Cross-Site Scripting (XSS)",
+    "endpoint": "/search",
+    "owasp": "A03:2021 – Injection",
+    "cwe": "CWE-79",
+    "description": "Reflected XSS via unsanitized HTML output"
+  },
+  "V8": {
+    "name": "Open Redirect",
+    "endpoint": "/redirect",
+    "owasp": "A01:2021 – Broken Access Control",
+    "cwe": "CWE-601",
+    "description": "User-controlled redirect URL"
+  },
+  "V9": {
+    "name": "Broken Access Control",
+    "endpoint": "/admin",
+    "owasp": "A01:2021 – Broken Access Control",
+    "cwe": "CWE-284",
+    "description": "Admin endpoint without authentication"
+  },
+  "V10": {
+    "name": "Insecure File Upload",
+    "endpoint": "/upload",
+    "owasp": "A03:2021 – Injection",
+    "cwe": "CWE-434",
+    "description": "File upload without validation or restrictions"
+  },
+  "V11": {
+    "name": "Information Disclosure",
+    "endpoint": "/debug",
+    "owasp": "A05:2021 – Security Misconfiguration",
+    "cwe": "CWE-200",
+    "description": "Exposure of environment variables"
+  },
+  "V12": {
+    "name": "Predictable Token Generation",
+    "endpoint": "/token",
+    "owasp": "A02:2021 – Cryptographic Failures",
+    "cwe": "CWE-330",
+    "description": "Use of non-cryptographic hash for token generation"
+  }
+}
