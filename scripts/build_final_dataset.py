@@ -20,17 +20,18 @@ def main():
             "project": "DevSecOps CI/CD Security Evaluation",
             "generated_at": datetime.now().isoformat()
         },
+       
         "ground_truth": {
-    "total_vulnerabilities": 23
-},
+            "total_vulnerabilities": 23
+        },
 
-"pipeline_breakdown": {
-    "build": load_json("metrics/build.json").get("duration_sec", 0),
-    "sast": load_json("metrics/sast_total.json").get("duration_sec", 0),
-    "deploy": load_json("metrics/deploy.json").get("duration_sec", 0),
-    "secret_scanning": load_json("metrics/secrets.json").get("duration_sec", 0),
-    "sca": load_json("metrics/sca.json").get("duration_sec", 0)
-}
+        "pipeline_breakdown": {
+            "build": load_json("metrics/build.json").get("duration_sec", 0),
+            "sast": load_json("metrics/sast_total.json").get("duration_sec", 0),
+            "deploy": load_json("metrics/deploy.json").get("duration_sec", 0),
+            "secret_scanning": load_json("metrics/secrets.json").get("duration_sec", 0),
+            "sca": load_json("metrics/sca.json").get("duration_sec", 0)
+        },
         
         # =========================
         # EFFECTIVENESS (TP/FP/FN)
