@@ -202,16 +202,6 @@ def unsafe_yaml():
     return str(yaml.load(data, Loader=yaml.Loader))
 
 
-# =========================
-# XML XXE
-# =========================
-@app.route("/xml", methods=["POST"])
-def unsafe_xml():
-    from lxml import etree
-    parser = etree.XMLParser(resolve_entities=True)
-    tree = etree.fromstring(request.data, parser)
-    return etree.tostring(tree)
-
 
 # =========================
 # JWT NONE / WEAK SECRET
