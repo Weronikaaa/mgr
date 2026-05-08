@@ -366,7 +366,7 @@ jobs:
         run: |
           docker run --rm \
             -v $(pwd):/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+            ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
             -t https://mgr.onrender.com \
             -J zap-report.json || true
 
