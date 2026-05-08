@@ -208,11 +208,17 @@ def parse_gitleaks():
         return set()
 
     data = load_json(path)
+    raw = json.dumps(data).lower()
+
+    findings = set()
 
     if isinstance(data, list) and len(data) > 0:
-        return {"V01"}
+        findings.add("V01")
 
-    return set()
+    if "dockerfile" in raw or "aws_secret_access_key" in raw or "api_token" in raw:
+        findings.add("V33")
+
+    return findings
 
 
 # =========================================
@@ -228,21 +234,26 @@ def parse_trufflehog():
     if not os.path.exists(path):
         return set()
 
-    findings = []
+    findings_raw = []
 
     with open(path, "r") as f:
-
         for line in f.readlines():
-
             try:
-                findings.append(json.loads(line))
+                findings_raw.append(json.loads(line))
             except:
                 pass
 
-    if len(findings) > 0:
-        return {"V01"}
+    raw = json.dumps(findings_raw).lower()
 
-    return set()
+    findings = set()
+
+    if len(findings_raw) > 0:
+        findings.add("V01")
+
+    if "dockerfile" in raw or "aws_secret_access_key" in raw or "api_token" in raw:
+        findings.add("V33")
+
+    return findings
 
 
 # =========================================
