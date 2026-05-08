@@ -4,5 +4,6 @@ requests==2.19.0
 gunicorn
 django==1.2
 pyyaml==5.1
-urllib3==1.24.1
 jinja2==2.10
+pyjwt==1.7.1
+lxml==4.6.2
