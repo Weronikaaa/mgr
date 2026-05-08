@@ -543,4 +543,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: final-experiment-dataset
-          path: final_experiment_dataset.json
+          path: |
+            final_experiment_dataset.json
+            results.csv
+            results.md
