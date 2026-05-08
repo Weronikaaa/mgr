@@ -36,13 +36,12 @@ GT_BY_CATEGORY = {}
 
 for vuln_id, vuln in GROUND_TRUTH.items():
 
+    category = vuln["category"]
 
-category = vuln["category"]
+    if category not in GT_BY_CATEGORY:
+        GT_BY_CATEGORY[category] = set()
 
-if category not in GT_BY_CATEGORY:
-    GT_BY_CATEGORY[category] = set()
-
-GT_BY_CATEGORY[category].add(vuln_id)
+    GT_BY_CATEGORY[category].add(vuln_id)
 
 
 # =========================================
@@ -82,47 +81,45 @@ CWE_MAP = {
 
 def extract_cwes(text):
 
+    text = str(text).upper()
 
-text = str(text).upper()
+    detected = set()
 
-detected = set()
+    for cwe, vuln_id in CWE_MAP.items():
 
-for cwe, vuln_id in CWE_MAP.items():
+        if cwe in text:
+            detected.add(vuln_id)
 
-    if cwe in text:
-        detected.add(vuln_id)
-
-return detected
+    return detected
 
 
 def calculate_metrics(detected, expected):
 
+    tp = len(detected & expected)
 
-tp = len(detected & expected)
+    fp = len(detected - expected)
 
-fp = len(detected - expected)
+    fn = len(expected - detected)
 
-fn = len(expected - detected)
+    precision = tp / (tp + fp) if (tp + fp) else 0
 
-precision = tp / (tp + fp) if (tp + fp) else 0
+    recall = tp / (tp + fn) if (tp + fn) else 0
 
-recall = tp / (tp + fn) if (tp + fn) else 0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall)
+        else 0
+    )
 
-f1 = (
-    2 * precision * recall / (precision + recall)
-    if (precision + recall)
-    else 0
-)
-
-return {
-    "TP": tp,
-    "FP": fp,
-    "FN": fn,
-    "precision": round(precision, 3),
-    "recall": round(recall, 3),
-    "f1_score": round(f1, 3),
-    "detected": sorted(list(detected))
-}
+    return {
+        "TP": tp,
+        "FP": fp,
+        "FN": fn,
+        "precision": round(precision, 3),
+        "recall": round(recall, 3),
+        "f1_score": round(f1, 3),
+        "detected": sorted(list(detected))
+    }
 
 
 # =========================================
@@ -133,27 +130,26 @@ return {
 
 def parse_bandit():
 
+    path = "bandit-report.json"
 
-path = "bandit-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
-    return set()
+    data = load_json(path)
 
-data = load_json(path)
+    findings = set()
 
-findings = set()
+    for issue in data.get("results", []):
 
-for issue in data.get("results", []):
+        text = (
+            str(issue.get("issue_cwe", ""))
+            + issue.get("issue_text", "")
+            + issue.get("test_name", "")
+        )
 
-    text = (
-        str(issue.get("issue_cwe", ""))
-        + issue.get("issue_text", "")
-        + issue.get("test_name", "")
-    )
+        findings |= extract_cwes(text)
 
-    findings |= extract_cwes(text)
-
-return findings
+    return findings
 
 
 # =========================================
@@ -164,31 +160,30 @@ return findings
 
 def parse_semgrep():
 
+    path = "semgrep-report.json"
 
-path = "semgrep-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
-    return set()
+    data = load_json(path)
 
-data = load_json(path)
+    findings = set()
 
-findings = set()
+    for issue in data.get("results", []):
 
-for issue in data.get("results", []):
+        metadata = issue.get("extra", {}).get("metadata", {})
 
-    metadata = issue.get("extra", {}).get("metadata", {})
+        cwe = metadata.get("cwe", [])
 
-    cwe = metadata.get("cwe", [])
+        text = (
+            issue.get("check_id", "")
+            + issue.get("extra", {}).get("message", "")
+            + str(cwe)
+        )
 
-    text = (
-        issue.get("check_id", "")
-        + issue.get("extra", {}).get("message", "")
-        + str(cwe)
-    )
+        findings |= extract_cwes(text)
 
-    findings |= extract_cwes(text)
-
-return findings
+    return findings
 
 
 # =========================================
@@ -199,18 +194,17 @@ return findings
 
 def parse_gitleaks():
 
+    path = "gitleaks-report.json"
 
-path = "gitleaks-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
+    data = load_json(path)
+
+    if isinstance(data, list) and len(data) > 0:
+        return {"V01"}
+
     return set()
-
-data = load_json(path)
-
-if isinstance(data, list) and len(data) > 0:
-    return {"V01"}
-
-return set()
 
 
 # =========================================
@@ -221,27 +215,26 @@ return set()
 
 def parse_trufflehog():
 
+    path = "trufflehog-report.json"
 
-path = "trufflehog-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
+    findings = []
+
+    with open(path, "r") as f:
+
+        for line in f.readlines():
+
+            try:
+                findings.append(json.loads(line))
+            except:
+                pass
+
+    if len(findings) > 0:
+        return {"V01"}
+
     return set()
-
-findings = []
-
-with open(path, "r") as f:
-
-    for line in f.readlines():
-
-        try:
-            findings.append(json.loads(line))
-        except:
-            pass
-
-if len(findings) > 0:
-    return {"V01"}
-
-return set()
 
 
 # =========================================
@@ -252,25 +245,24 @@ return set()
 
 def parse_trivy_fs():
 
+    path = "trivy-report.json"
 
-path = "trivy-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
-    return set()
+    data = load_json(path)
 
-data = load_json(path)
+    findings = set()
 
-findings = set()
+    for result in data.get("Results", []):
 
-for result in data.get("Results", []):
+        for vuln in result.get("Vulnerabilities", []):
 
-    for vuln in result.get("Vulnerabilities", []):
+            cwes = vuln.get("CweIDs", [])
 
-        cwes = vuln.get("CweIDs", [])
+            findings |= extract_cwes(" ".join(cwes))
 
-        findings |= extract_cwes(" ".join(cwes))
-
-return findings
+    return findings
 
 
 # =========================================
@@ -281,26 +273,24 @@ return findings
 
 def parse_grype():
 
+    path = "grype-report.json"
 
-path = "grype-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
-    return set()
+    data = load_json(path)
 
-data = load_json(path)
+    findings = set()
 
-findings = set()
+    for match in data.get("matches", []):
 
-for match in data.get("matches", []):
+        vuln = match.get("vulnerability", {})
 
-    vuln = match.get("vulnerability", {})
+        cwes = vuln.get("cwe", [])
 
-    cwes = vuln.get("cwe", [])
+        findings |= extract_cwes(str(cwes))
 
-    findings |= extract_cwes(str(cwes))
-
-return findings
-
+    return findings
 
 # =========================================
 
@@ -310,32 +300,31 @@ return findings
 
 def parse_zap():
 
+    path = "zap-report.json"
 
-path = "zap-report.json"
+    if not os.path.exists(path):
+        return set()
 
-if not os.path.exists(path):
-    return set()
+    findings = set()
 
-findings = set()
+    data = load_json(path)
 
-data = load_json(path)
+    alerts = data.get("site", [])
 
-alerts = data.get("site", [])
+    raw = json.dumps(alerts)
 
-raw = json.dumps(alerts)
+    raw = raw.lower()
 
-raw = raw.lower()
+    if "xss" in raw:
+        findings.add("V22")
 
-if "xss" in raw:
-    findings.add("V22")
+    if "redirect" in raw:
+        findings.add("V23")
 
-if "redirect" in raw:
-    findings.add("V23")
+    if "authentication" in raw:
+        findings.add("V21")
 
-if "authentication" in raw:
-    findings.add("V21")
-
-return findings
+    return findings
 
 
 # =========================================
@@ -392,48 +381,47 @@ TOOLS = {
 
 def main():
 
+    results = {
+        "metadata": {
+            "generated_at": datetime.now().isoformat(),
+            "project": "DevSecOps CI/CD Evaluation"
+        },
 
-results = {
-    "metadata": {
-        "generated_at": datetime.now().isoformat(),
-        "project": "DevSecOps CI/CD Evaluation"
-    },
-
-    "tools": {}
-}
-
-csv_rows = []
-
-for tool_name, config in TOOLS.items():
-
-    parser = config["parser"]
-
-    category = config["category"]
-
-    expected = GT_BY_CATEGORY.get(category, set())
-
-    detected = parser()
-
-    metrics = calculate_metrics(detected, expected)
-
-    results["tools"][tool_name] = {
-        "category": category,
-        "metrics": metrics
+        "tools": {}
     }
 
-    csv_rows.append([
-        tool_name,
-        category,
-        metrics["TP"],
-        metrics["FP"],
-        metrics["FN"],
-        metrics["precision"],
-        metrics["recall"],
-        metrics["f1_score"]
-    ])
+    csv_rows = []
 
-    print(f"✅ {tool_name}")
-    print(metrics)
+    for tool_name, config in TOOLS.items():
+
+        parser = config["parser"]
+
+        category = config["category"]
+
+        expected = GT_BY_CATEGORY.get(category, set())
+
+        detected = parser()
+
+        metrics = calculate_metrics(detected, expected)
+
+        results["tools"][tool_name] = {
+            "category": category,
+            "metrics": metrics
+        }
+
+        csv_rows.append([
+            tool_name,
+            category,
+            metrics["TP"],
+            metrics["FP"],
+            metrics["FN"],
+            metrics["precision"],
+            metrics["recall"],
+            metrics["f1_score"]
+        ])
+
+        print(f"✅ {tool_name}")
+        print(metrics)
 
 # =====================================
 # SAVE JSON
