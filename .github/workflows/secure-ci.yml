@@ -531,6 +531,19 @@ jobs:
         with:
           path: artifacts/
 
+      - name: Copy reports
+        run: |
+          find artifacts/ -name "bandit-report.json" -exec cp {} . \;
+          find artifacts/ -name "semgrep-report.json" -exec cp {} . \;
+          find artifacts/ -name "sonarqube-metrics.json" -exec cp {} . \;
+          find artifacts/ -name "gitleaks-report.json" -exec cp {} . \;
+          find artifacts/ -name "trufflehog-report.json" -exec cp {} . \;
+          find artifacts/ -name "trivy-report.json" -exec cp {} . \;
+          find artifacts/ -name "trivy-image.json" -exec cp {} . \;
+          find artifacts/ -name "grype-report.json" -exec cp {} . \;
+          find artifacts/ -name "zap-report.json" -exec cp {} . \;
+          ls -la
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
