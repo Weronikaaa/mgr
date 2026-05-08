@@ -15,12 +15,11 @@ GROUND_TRUTH_FILE = "data/ground_truth.json"
 
 def load_json(path):
 
+    if not os.path.exists(path):
+        return {}
 
-if not os.path.exists(path):
-    return {}
-
-with open(path, "r") as f:
-    return json.load(f)
+    with open(path, "r") as f:
+        return json.load(f)
 
 
 # =========================================
