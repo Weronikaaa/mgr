@@ -332,11 +332,14 @@ def parse_zap():
     path = "zap-report.json"
 
     if not os.path.exists(path):
+        print("ZAP report not found")
         return set()
 
     data = load_json(path)
-
     raw = json.dumps(data).lower()
+
+    print("ZAP report length:", len(raw))
+    print("ZAP report preview:", raw[:3000])
 
     findings = set()
 
@@ -346,8 +349,8 @@ def parse_zap():
     if "redirect" in raw:
         findings.add("V23")
 
-    if "authentication" in raw or "absence of anti-csrf" in raw:
-        findings.add("V21")
+    if "cookie" in raw or "httponly" in raw or "secure flag" in raw:
+        findings.add("V24")
 
     return findings
 
