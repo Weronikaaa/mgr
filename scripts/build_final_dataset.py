@@ -171,7 +171,7 @@ def main():
     ground_truth = ground_truth_raw.get("vulnerabilities", {})
 
     detected = parse_semgrep()
-print("SEMgrep detected:", detected)
+    print("SEMgrep detected:", detected)
 
     tools = {
         "bandit": parse_bandit,
