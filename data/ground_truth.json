@@ -140,7 +140,7 @@
 },
 "V24": {
   "name": "Insecure Cookie Configuration",
-  "category": "DAST",
+  "category": "SAST",
   "location": "app.py:/cookie",
   "cwe": "CWE-614"
 },
