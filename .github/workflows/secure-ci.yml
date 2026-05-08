@@ -364,16 +364,24 @@ jobs:
 
       - name: Run OWASP ZAP full scan
         run: |
+          cat > zap-urls.txt <<EOF
+          https://mgr.onrender.com/
+          https://mgr.onrender.com/search?q=<script>alert(1)</script>
+          https://mgr.onrender.com/redirect?url=http://evil.com
+          https://mgr.onrender.com/cookie
+          https://mgr.onrender.com/admin
+          EOF
+      
           docker run --rm \
             -v $(pwd):/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
             -t https://mgr.onrender.com \
             -J zap-report.json \
-            -m 3 || true
+            -m 5 || true
 
       - name: Debug ZAP report
         run: |
-          ls -la
+          echo "=== ZAP report ==="
           cat zap-report.json || true
 
       - name: Upload ZAP report
