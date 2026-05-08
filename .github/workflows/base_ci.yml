@@ -1,0 +1,187 @@
+name: Base CI/CD
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  actions: read
+  checks: read
+  deployments: read
+  packages: read
+  pull-requests: read
+  repository-projects: read
+  security-events: read
+  
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+
+# ================= BUILD =================
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start build timer
+        run: echo "BUILD_START=$(date +%s%N)" >> $GITHUB_ENV
+      - name: Debug repo structure
+        run: ls -R
+      - name: Start build timer
+        run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: apps/python-app
+        run: |
+          pip install -r requirements.txt
+
+      - name: Compile check
+        working-directory: apps/python-app
+        run: python -m py_compile app.py
+
+      - name: End build timer
+        run: echo "BUILD_END=$(date +%s%N)" >> $GITHUB_ENV
+
+# ================= DEPLOY =================
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Start deploy timer
+        run: echo "DEPLOY_START=$(date +%s)" >> $GITHUB_ENV
+      - name: Trigger Render deploy
+        run: |
+          curl -X POST "https://api.render.com/deploy/srv_${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}"
+      - name: End deploy timer
+        run: echo "DEPLOY_END=$(date +%s)" >> $GITHUB_ENV
+
+
+            
+# ================= SMOKE TESTS =================
+  smoke-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        run: |
+          chmod +x scripts/smoke-tests.sh
+          ./scripts/smoke-tests.sh https://mgr.onrender.com
+
+# ================= METRICS =================
+  metrics:
+    runs-on: ubuntu-latest  
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+  
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+  
+      - name: Aggregate metrics
+        run: python scripts/aggregate-metrics.py
+  
+      - name: Upload final metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-metrics
+          path: metrics/
+
+# ================= DASHBOARD =================
+  generate-dashboard:
+    runs-on: ubuntu-latest
+    needs: [metrics]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Debug - list all downloaded artifacts
+        run: |
+          echo "=== All downloaded files ==="
+          find artifacts/ -type f
+          echo ""
+          echo "=== Looking for reports ==="
+          find artifacts/ -name "*.json" -type f
+      
+      - name: Copy reports to metrics directory
+        run: |
+          mkdir -p metrics
+          find artifacts/ -name "bandit-report.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "semgrep-report.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "trivy-report.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "trivy-image.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "gitleaks*.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "trufflehog*.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "grype*.json" -exec cp {} metrics/ \;
+          find artifacts/ -name "zap-report.json" -exec cp {} metrics/ \;
+          
+          echo "=== Files in metrics/ ==="
+          ls -la metrics/
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: pip install matplotlib pandas numpy plotly
+      
+      - name: Generate dashboard
+        run: python scripts/generate-dashboard.py
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard
+          publish_branch: gh-pages
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy dashboard'
+          force_orphan: true
+          keep_files: false
+
+
+# ================= final-dataset =================
+  final-dataset:
+    runs-on: ubuntu-latest
+    needs: [metrics]
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build final dataset
+        run: python scripts/build_final_dataset.py
+
+      - name: Upload dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-experiment-dataset
+          path: final_experiment_dataset.json
