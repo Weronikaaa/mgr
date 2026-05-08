@@ -372,7 +372,8 @@ TOOLS = {
 
 "grype": {
     "parser": parse_grype,
-    "category": "SCA_CONTAINER"
+    "category": "SCA_CONTAINER",
+    "expected": {"V15", "V16", "V17", "V18", "V19", "V20"}
 },
 
 "zap": {
@@ -408,7 +409,7 @@ def main():
 
         category = config["category"]
 
-        expected = GT_BY_CATEGORY.get(category, set())
+        expected = config.get("expected", GT_BY_CATEGORY.get(category, set()))
 
         detected = parser()
 
