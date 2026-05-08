@@ -362,13 +362,19 @@ jobs:
         id: zap-start
         run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
 
-      - name: Run OWASP ZAP baseline scan
+      - name: Run OWASP ZAP full scan
         run: |
           docker run --rm \
             -v $(pwd):/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
             -t https://mgr.onrender.com \
-            -J zap-report.json || true
+            -J zap-report.json \
+            -m 3 || true
+
+      - name: Debug ZAP report
+        run: |
+          ls -la
+          cat zap-report.json || true
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
