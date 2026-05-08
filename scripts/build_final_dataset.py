@@ -15,13 +15,13 @@ GROUND_TRUTH_FILE = "data/ground_truth.json"
 
 def load_json(path):
 
-```
+
 if not os.path.exists(path):
     return {}
 
 with open(path, "r") as f:
     return json.load(f)
-```
+
 
 # =========================================
 
@@ -37,14 +37,14 @@ GT_BY_CATEGORY = {}
 
 for vuln_id, vuln in GROUND_TRUTH.items():
 
-```
+
 category = vuln["category"]
 
 if category not in GT_BY_CATEGORY:
     GT_BY_CATEGORY[category] = set()
 
 GT_BY_CATEGORY[category].add(vuln_id)
-```
+
 
 # =========================================
 
@@ -83,7 +83,7 @@ CWE_MAP = {
 
 def extract_cwes(text):
 
-```
+
 text = str(text).upper()
 
 detected = set()
@@ -94,11 +94,11 @@ for cwe, vuln_id in CWE_MAP.items():
         detected.add(vuln_id)
 
 return detected
-```
+
 
 def calculate_metrics(detected, expected):
 
-```
+
 tp = len(detected & expected)
 
 fp = len(detected - expected)
@@ -124,7 +124,7 @@ return {
     "f1_score": round(f1, 3),
     "detected": sorted(list(detected))
 }
-```
+
 
 # =========================================
 
@@ -134,7 +134,7 @@ return {
 
 def parse_bandit():
 
-```
+
 path = "bandit-report.json"
 
 if not os.path.exists(path):
@@ -155,7 +155,7 @@ for issue in data.get("results", []):
     findings |= extract_cwes(text)
 
 return findings
-```
+
 
 # =========================================
 
@@ -165,7 +165,7 @@ return findings
 
 def parse_semgrep():
 
-```
+
 path = "semgrep-report.json"
 
 if not os.path.exists(path):
@@ -190,7 +190,7 @@ for issue in data.get("results", []):
     findings |= extract_cwes(text)
 
 return findings
-```
+
 
 # =========================================
 
@@ -200,7 +200,7 @@ return findings
 
 def parse_gitleaks():
 
-```
+
 path = "gitleaks-report.json"
 
 if not os.path.exists(path):
@@ -212,7 +212,7 @@ if isinstance(data, list) and len(data) > 0:
     return {"V01"}
 
 return set()
-```
+
 
 # =========================================
 
@@ -222,7 +222,7 @@ return set()
 
 def parse_trufflehog():
 
-```
+
 path = "trufflehog-report.json"
 
 if not os.path.exists(path):
@@ -243,7 +243,7 @@ if len(findings) > 0:
     return {"V01"}
 
 return set()
-```
+
 
 # =========================================
 
@@ -253,7 +253,7 @@ return set()
 
 def parse_trivy_fs():
 
-```
+
 path = "trivy-report.json"
 
 if not os.path.exists(path):
@@ -272,7 +272,7 @@ for result in data.get("Results", []):
         findings |= extract_cwes(" ".join(cwes))
 
 return findings
-```
+
 
 # =========================================
 
@@ -282,7 +282,7 @@ return findings
 
 def parse_grype():
 
-```
+
 path = "grype-report.json"
 
 if not os.path.exists(path):
@@ -301,7 +301,7 @@ for match in data.get("matches", []):
     findings |= extract_cwes(str(cwes))
 
 return findings
-```
+
 
 # =========================================
 
@@ -311,7 +311,7 @@ return findings
 
 def parse_zap():
 
-```
+
 path = "zap-report.json"
 
 if not os.path.exists(path):
@@ -337,7 +337,7 @@ if "authentication" in raw:
     findings.add("V21")
 
 return findings
-```
+
 
 # =========================================
 
@@ -351,7 +351,7 @@ TOOLS = {
 "category": "SAST"
 },
 
-```
+
 "semgrep": {
     "parser": parse_semgrep,
     "category": "SAST"
@@ -381,7 +381,7 @@ TOOLS = {
     "parser": parse_zap,
     "category": "DAST"
 }
-```
+
 
 }
 
@@ -393,7 +393,7 @@ TOOLS = {
 
 def main():
 
-```
+
 results = {
     "metadata": {
         "generated_at": datetime.now().isoformat(),
@@ -487,7 +487,7 @@ print("\n✅ FINAL DATASET GENERATED")
 print("📁 final_experiment_dataset.json")
 print("📁 results.csv")
 print("📁 results.md")
-```
 
-if **name** == "**main**":
-main()
+
+if __name__ == "__main__":
+    main()
