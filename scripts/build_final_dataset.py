@@ -372,7 +372,7 @@ TOOLS = {
 
 "grype": {
     "parser": parse_grype,
-    "category": "Container"
+    "category": "SCA_CONTAINER"
 },
 
 "zap": {
