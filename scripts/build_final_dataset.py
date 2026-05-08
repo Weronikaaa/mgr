@@ -423,57 +423,57 @@ def main():
         print(f"✅ {tool_name}")
         print(metrics)
 
-# =====================================
-# SAVE JSON
-# =====================================
+    # =====================================
+    # SAVE JSON
+    # =====================================
 
-with open("final_experiment_dataset.json", "w") as f:
-    json.dump(results, f, indent=2)
+    with open("final_experiment_dataset.json", "w") as f:
+        json.dump(results, f, indent=2)
 
-# =====================================
-# SAVE CSV
-# =====================================
+    # =====================================
+    # SAVE CSV
+    # =====================================
 
-with open("results.csv", "w", newline="") as f:
+    with open("results.csv", "w", newline="") as f:
 
-    writer = csv.writer(f)
+        writer = csv.writer(f)
 
-    writer.writerow([
-        "Tool",
-        "Category",
-        "TP",
-        "FP",
-        "FN",
-        "Precision",
-        "Recall",
-        "F1"
-    ])
+        writer.writerow([
+            "Tool",
+            "Category",
+            "TP",
+            "FP",
+            "FN",
+            "Precision",
+            "Recall",
+            "F1"
+        ])
 
-    writer.writerows(csv_rows)
+        writer.writerows(csv_rows)
 
-# =====================================
-# SAVE MARKDOWN
-# =====================================
+    # =====================================
+    # SAVE MARKDOWN
+    # =====================================
 
-with open("results.md", "w") as f:
+    with open("results.md", "w") as f:
 
-    f.write("# Security Tools Evaluation\n\n")
+        f.write("# Security Tools Evaluation\n\n")
 
-    f.write("| Tool | Category | TP | FP | FN | Precision | Recall | F1 |\n")
-    f.write("|------|----------|----|----|----|-----------|--------|----|\n")
+        f.write("| Tool | Category | TP | FP | FN | Precision | Recall | F1 |\n")
+        f.write("|------|----------|----|----|----|-----------|--------|----|\n")
 
-    for row in csv_rows:
+        for row in csv_rows:
 
-        f.write(
-            f"| {row[0]} | {row[1]} | {row[2]} | "
-            f"{row[3]} | {row[4]} | {row[5]} | "
-            f"{row[6]} | {row[7]} |\n"
-        )
+            f.write(
+                f"| {row[0]} | {row[1]} | {row[2]} | "
+                f"{row[3]} | {row[4]} | {row[5]} | "
+                f"{row[6]} | {row[7]} |\n"
+            )
 
-print("\n✅ FINAL DATASET GENERATED")
-print("📁 final_experiment_dataset.json")
-print("📁 results.csv")
-print("📁 results.md")
+    print("\n✅ FINAL DATASET GENERATED")
+    print("📁 final_experiment_dataset.json")
+    print("📁 results.csv")
+    print("📁 results.md")
 
 
 if __name__ == "__main__":
