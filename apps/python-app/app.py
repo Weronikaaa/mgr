@@ -170,6 +170,57 @@ def metrics():
         generate_latest(),
         mimetype="text/plain"
     )
+
+# =========================
+# INSECURE COOKIE
+# =========================
+@app.route("/cookie")
+def insecure_cookie():
+    response = Response("Cookie set")
+    response.set_cookie("session", "admin-session-123")
+    return response
+
+
+# =========================
+# SSRF
+# =========================
+@app.route("/fetch")
+def fetch_url():
+    import requests
+    url = request.args.get("url")
+    r = requests.get(url)
+    return r.text
+
+
+# =========================
+# YAML UNSAFE LOAD
+# =========================
+@app.route("/yaml", methods=["POST"])
+def unsafe_yaml():
+    import yaml
+    data = request.data
+    return str(yaml.load(data, Loader=yaml.Loader))
+
+
+# =========================
+# XML XXE
+# =========================
+@app.route("/xml", methods=["POST"])
+def unsafe_xml():
+    from lxml import etree
+    parser = etree.XMLParser(resolve_entities=True)
+    tree = etree.fromstring(request.data, parser)
+    return etree.tostring(tree)
+
+
+# =========================
+# JWT NONE / WEAK SECRET
+# =========================
+@app.route("/jwt")
+def weak_jwt():
+    import jwt
+    token = jwt.encode({"user": "admin"}, "secret", algorithm="HS256")
+    return token
     
 # =========================
 if __name__ == "__main__":
