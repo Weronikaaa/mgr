@@ -6,4 +6,3 @@ django==1.2
 pyyaml==5.1
 jinja2==2.10
 pyjwt==1.7.1
-lxml==4.6.2
