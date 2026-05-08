@@ -1,4 +1,4 @@
-name: Python CI/CD
+name: Secure CI/CD
 
 permissions:
   contents: write
