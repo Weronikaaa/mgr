@@ -81,13 +81,17 @@ CWE_MAP = {
 
 def extract_cwes(text):
 
-    text = str(text).upper()
+    text = str(text).upper().replace(":", "-")
 
     detected = set()
 
     for cwe, vuln_id in CWE_MAP.items():
 
-        if cwe in text:
+        normalized = cwe.upper()
+
+        short = normalized.replace("CWE-", "")
+
+        if normalized in text or short in text:
             detected.add(vuln_id)
 
     return detected
