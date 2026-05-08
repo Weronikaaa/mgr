@@ -1,208 +1,493 @@
 #!/usr/bin/env python3
+
 import json
 import os
+import csv
 from datetime import datetime
 
-OUTPUT_FILE = "final_experiment_dataset.json"
 GROUND_TRUTH_FILE = "data/ground_truth.json"
 
+# =========================================
 
-# =========================
 # LOAD JSON
-# =========================
+
+# =========================================
+
 def load_json(path):
-    if not os.path.exists(path):
-        return {}
-    with open(path) as f:
-        return json.load(f)
 
+```
+if not os.path.exists(path):
+    return {}
 
-# =========================
-# IMPROVED RULE-BASED MAPPING (ACADEMIC VERSION)
-# =========================
-RULES = {
-    "V01": ["hardcoded", "secret", "api key", "password"],
-    "V02": ["sql", "sql injection", "cwe-89", "execute", "sqlite"],
-    "V03": ["command injection", "subprocess", "cwe-78", "shell=true"],
-    "V04": ["eval", "code injection", "cwe-94"],
-    "V05": ["pickle", "deserialization", "cwe-502"],
-    "V06": ["md5", "weak hash", "cwe-327"],
-    "V07": ["path traversal", "cwe-22", "open("],
-    "V08": ["xss", "cross-site scripting", "html"],
-    "V09": ["redirect", "open redirect", "cwe-601"],
-    "V10": ["access control", "authorization", "broken access"],
-    "V11": ["upload", "file upload", "cwe-434"],
-    "V12": ["information disclosure", "debug", "os.environ", "cwe-200"],
-    "V13": ["token", "predictable", "random", "hash"],
-    "V14": ["debug mode", "flask debug", "cwe-489"]
-}
+with open(path, "r") as f:
+    return json.load(f)
+```
+
+# =========================================
+
+# LOAD GROUND TRUTH
+
+# =========================================
+
+ground_truth_raw = load_json(GROUND_TRUTH_FILE)
+
+GROUND_TRUTH = ground_truth_raw.get("vulnerabilities", {})
+
+GT_BY_CATEGORY = {}
+
+for vuln_id, vuln in GROUND_TRUTH.items():
+
+```
+category = vuln["category"]
+
+if category not in GT_BY_CATEGORY:
+    GT_BY_CATEGORY[category] = set()
+
+GT_BY_CATEGORY[category].add(vuln_id)
+```
+
+# =========================================
+
+# CWE -> VULN MAP
+
+# =========================================
 
 CWE_MAP = {
-    "CWE-798": "V01",
-    "CWE-89": "V02",
-    "CWE-78": "V03",
-    "CWE-94": "V04",
-    "CWE-502": "V05",
-    "CWE-327": "V06",
-    "CWE-22": "V07",
-    "CWE-79": "V08",
-    "CWE-601": "V09",
-    "CWE-284": "V10",
-    "CWE-434": "V11",
-    "CWE-200": "V12",
-    "CWE-330": "V13",
-    "CWE-489": "V14",
-    "CWE-1104": "V15",
-    "CWE-250": "V18",
-    "CWE-693": "V19",
-    "CWE-494": "V20",
-    "CWE-1008": "V21",
-    "CWE-16": "V23"
+"CWE-798": "V01",
+"CWE-89": "V02",
+"CWE-78": "V03",
+"CWE-94": "V04",
+"CWE-502": "V05",
+"CWE-327": "V06",
+"CWE-22": "V07",
+"CWE-79": "V08",
+"CWE-601": "V09",
+"CWE-284": "V10",
+"CWE-434": "V11",
+"CWE-200": "V12",
+"CWE-330": "V13",
+"CWE-489": "V14",
+"CWE-1104": "V15",
+"CWE-250": "V17",
+"CWE-693": "V18",
+"CWE-494": "V19",
+"CWE-16": "V20",
+"CWE-306": "V21"
 }
+
+# =========================================
+
+# HELPERS
+
+# =========================================
+
 def extract_cwes(text):
-    text = str(text).lower()
-    detected = set()
 
-    for cwe, vuln_id in CWE_MAP.items():
+```
+text = str(text).upper()
 
-        cwe_id = cwe.lower().split(":")[0]   # 🔥 FIX
+detected = set()
 
-        if cwe_id in text:
-            detected.add(vuln_id)
+for cwe, vuln_id in CWE_MAP.items():
 
-    return detected
+    if cwe in text:
+        detected.add(vuln_id)
 
-def normalize(text):
-    return str(text).lower()
+return detected
+```
 
+def calculate_metrics(detected, expected):
 
-def detect_vulnerabilities(text):
-    text = normalize(text)
-    detected = set()
+```
+tp = len(detected & expected)
 
-    for vuln_id, patterns in RULES.items():
-        for p in patterns:
-            if p in text:
-                detected.add(vuln_id)
-                break
+fp = len(detected - expected)
 
-    return detected
+fn = len(expected - detected)
 
+precision = tp / (tp + fp) if (tp + fp) else 0
 
-# =========================
-# PARSERS (RAW REPORTS)
-# =========================
+recall = tp / (tp + fn) if (tp + fn) else 0
+
+f1 = (
+    2 * precision * recall / (precision + recall)
+    if (precision + recall)
+    else 0
+)
+
+return {
+    "TP": tp,
+    "FP": fp,
+    "FN": fn,
+    "precision": round(precision, 3),
+    "recall": round(recall, 3),
+    "f1_score": round(f1, 3),
+    "detected": sorted(list(detected))
+}
+```
+
+# =========================================
+
+# BANDIT
+
+# =========================================
 
 def parse_bandit():
-    data = load_json("bandit-report.json")
-    findings = set()
 
-    for issue in data.get("results", []):
-        text = " ".join([
-            issue.get("test_name", ""),
-            issue.get("test_id", ""),
-            str(issue.get("issue_cwe", ""))
-        ])
+```
+path = "bandit-report.json"
 
-        findings |= extract_cwes(text)
+if not os.path.exists(path):
+    return set()
 
-    return findings
+data = load_json(path)
 
+findings = set()
+
+for issue in data.get("results", []):
+
+    text = (
+        str(issue.get("issue_cwe", ""))
+        + issue.get("issue_text", "")
+        + issue.get("test_name", "")
+    )
+
+    findings |= extract_cwes(text)
+
+return findings
+```
+
+# =========================================
+
+# SEMGREP
+
+# =========================================
 
 def parse_semgrep():
-    data = load_json("semgrep-report.json")
-    findings = set()
 
-    for issue in data.get("results", []):
+```
+path = "semgrep-report.json"
 
-        cwe_list = issue.get("extra", {}).get("metadata", {}).get("cwe", [])
+if not os.path.exists(path):
+    return set()
 
-        text = issue.get("check_id", "")
+data = load_json(path)
 
-        # 🔥 dodaj CWE bezpośrednio
-        text += " " + " ".join(cwe_list)
+findings = set()
 
-        findings |= extract_cwes(text)
+for issue in data.get("results", []):
 
-    return findings
+    metadata = issue.get("extra", {}).get("metadata", {})
 
+    cwe = metadata.get("cwe", [])
 
-def parse_sonarqube():
-    data = load_json("sonarqube-metrics.json")
+    text = (
+        issue.get("check_id", "")
+        + issue.get("extra", {}).get("message", "")
+        + str(cwe)
+    )
 
-    text = ""
+    findings |= extract_cwes(text)
 
-    for m in data.get("component", {}).get("measures", []):
-        text += str(m.get("metric", "")) + " " + str(m.get("value", ""))
+return findings
+```
 
-    return extract_cwes(text)
+# =========================================
 
+# GITLEAKS
 
-# =========================
-# METRICS
-# =========================
-def calculate_metrics(detected, ground_truth):
-    gt = set(ground_truth.keys())
+# =========================================
 
-    tp = len(detected & gt)
-    fp = len(detected - gt)
-    fn = len(gt - detected)
+def parse_gitleaks():
 
-    precision = tp / (tp + fp) if tp + fp else 0
-    recall = tp / len(gt) if gt else 0
-    f1 = (2 * precision * recall / (precision + recall)) if precision + recall else 0
+```
+path = "gitleaks-report.json"
 
-    return {
-        "tp": tp,
-        "fp": fp,
-        "fn": fn,
-        "precision": round(precision, 3),
-        "recall": round(recall, 3),
-        "f1": round(f1, 3),
-        "detected": sorted(list(detected))
-    }
+if not os.path.exists(path):
+    return set()
 
-# =========================
+data = load_json(path)
+
+if isinstance(data, list) and len(data) > 0:
+    return {"V01"}
+
+return set()
+```
+
+# =========================================
+
+# TRUFFLEHOG
+
+# =========================================
+
+def parse_trufflehog():
+
+```
+path = "trufflehog-report.json"
+
+if not os.path.exists(path):
+    return set()
+
+findings = []
+
+with open(path, "r") as f:
+
+    for line in f.readlines():
+
+        try:
+            findings.append(json.loads(line))
+        except:
+            pass
+
+if len(findings) > 0:
+    return {"V01"}
+
+return set()
+```
+
+# =========================================
+
+# TRIVY FS
+
+# =========================================
+
+def parse_trivy_fs():
+
+```
+path = "trivy-report.json"
+
+if not os.path.exists(path):
+    return set()
+
+data = load_json(path)
+
+findings = set()
+
+for result in data.get("Results", []):
+
+    for vuln in result.get("Vulnerabilities", []):
+
+        cwes = vuln.get("CweIDs", [])
+
+        findings |= extract_cwes(" ".join(cwes))
+
+return findings
+```
+
+# =========================================
+
+# GRYPE
+
+# =========================================
+
+def parse_grype():
+
+```
+path = "grype-report.json"
+
+if not os.path.exists(path):
+    return set()
+
+data = load_json(path)
+
+findings = set()
+
+for match in data.get("matches", []):
+
+    vuln = match.get("vulnerability", {})
+
+    cwes = vuln.get("cwe", [])
+
+    findings |= extract_cwes(str(cwes))
+
+return findings
+```
+
+# =========================================
+
+# ZAP
+
+# =========================================
+
+def parse_zap():
+
+```
+path = "zap-report.json"
+
+if not os.path.exists(path):
+    return set()
+
+findings = set()
+
+data = load_json(path)
+
+alerts = data.get("site", [])
+
+raw = json.dumps(alerts)
+
+raw = raw.lower()
+
+if "xss" in raw:
+    findings.add("V22")
+
+if "redirect" in raw:
+    findings.add("V23")
+
+if "authentication" in raw:
+    findings.add("V21")
+
+return findings
+```
+
+# =========================================
+
+# TOOL DEFINITIONS
+
+# =========================================
+
+TOOLS = {
+"bandit": {
+"parser": parse_bandit,
+"category": "SAST"
+},
+
+```
+"semgrep": {
+    "parser": parse_semgrep,
+    "category": "SAST"
+},
+
+"gitleaks": {
+    "parser": parse_gitleaks,
+    "category": "Secrets"
+},
+
+"trufflehog": {
+    "parser": parse_trufflehog,
+    "category": "Secrets"
+},
+
+"trivy_fs": {
+    "parser": parse_trivy_fs,
+    "category": "SCA"
+},
+
+"grype": {
+    "parser": parse_grype,
+    "category": "Container"
+},
+
+"zap": {
+    "parser": parse_zap,
+    "category": "DAST"
+}
+```
+
+}
+
+# =========================================
+
 # MAIN
-# =========================
+
+# =========================================
+
 def main():
 
-    ground_truth_raw = load_json(GROUND_TRUTH_FILE)
-    ground_truth = ground_truth_raw.get("vulnerabilities", {})
+```
+results = {
+    "metadata": {
+        "generated_at": datetime.now().isoformat(),
+        "project": "DevSecOps CI/CD Evaluation"
+    },
 
-    detected = parse_semgrep()
-    print("SEMgrep detected:", detected)
+    "tools": {}
+}
 
-    tools = {
-        "bandit": parse_bandit,
-        "semgrep": parse_semgrep,
-        "sonarqube": parse_sonarqube
+csv_rows = []
+
+for tool_name, config in TOOLS.items():
+
+    parser = config["parser"]
+
+    category = config["category"]
+
+    expected = GT_BY_CATEGORY.get(category, set())
+
+    detected = parser()
+
+    metrics = calculate_metrics(detected, expected)
+
+    results["tools"][tool_name] = {
+        "category": category,
+        "metrics": metrics
     }
 
-    results = {
-        "metadata": {
-            "project": "DevSecOps CI/CD Security Evaluation",
-            "generated_at": datetime.now().isoformat()
-        },
+    csv_rows.append([
+        tool_name,
+        category,
+        metrics["TP"],
+        metrics["FP"],
+        metrics["FN"],
+        metrics["precision"],
+        metrics["recall"],
+        metrics["f1_score"]
+    ])
 
-        "ground_truth": {
-            "total_vulnerabilities": len(ground_truth),
-            "items": list(ground_truth.keys())
-        },
+    print(f"✅ {tool_name}")
+    print(metrics)
 
-        "sast": {}
-    }
+# =====================================
+# SAVE JSON
+# =====================================
 
-    for tool_name, parser in tools.items():
-        detected = parser()
-        results["sast"][tool_name] = calculate_metrics(detected, ground_truth)
+with open("final_experiment_dataset.json", "w") as f:
+    json.dump(results, f, indent=2)
 
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(results, f, indent=2)
+# =====================================
+# SAVE CSV
+# =====================================
 
-    print("✅ FINAL DATASET GENERATED")
-    print(f"📁 {OUTPUT_FILE}")
+with open("results.csv", "w", newline="") as f:
 
+    writer = csv.writer(f)
 
-if __name__ == "__main__":
-    main()
+    writer.writerow([
+        "Tool",
+        "Category",
+        "TP",
+        "FP",
+        "FN",
+        "Precision",
+        "Recall",
+        "F1"
+    ])
+
+    writer.writerows(csv_rows)
+
+# =====================================
+# SAVE MARKDOWN
+# =====================================
+
+with open("results.md", "w") as f:
+
+    f.write("# Security Tools Evaluation\n\n")
+
+    f.write("| Tool | Category | TP | FP | FN | Precision | Recall | F1 |\n")
+    f.write("|------|----------|----|----|----|-----------|--------|----|\n")
+
+    for row in csv_rows:
+
+        f.write(
+            f"| {row[0]} | {row[1]} | {row[2]} | "
+            f"{row[3]} | {row[4]} | {row[5]} | "
+            f"{row[6]} | {row[7]} |\n"
+        )
+
+print("\n✅ FINAL DATASET GENERATED")
+print("📁 final_experiment_dataset.json")
+print("📁 results.csv")
+print("📁 results.md")
+```
+
+if **name** == "**main**":
+main()
