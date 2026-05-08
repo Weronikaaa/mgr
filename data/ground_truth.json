@@ -137,6 +137,66 @@
 "category": "DAST",
 "location": "/redirect",
 "cwe": "CWE-601"
+},
+"V24": {
+  "name": "Insecure Cookie Configuration",
+  "category": "DAST",
+  "location": "app.py:/cookie",
+  "cwe": "CWE-614"
+},
+"V25": {
+  "name": "Server-Side Request Forgery",
+  "category": "SAST",
+  "location": "app.py:/fetch",
+  "cwe": "CWE-918"
+},
+"V26": {
+  "name": "Unsafe YAML Deserialization",
+  "category": "SAST",
+  "location": "app.py:/yaml",
+  "cwe": "CWE-502"
+},
+"V27": {
+  "name": "Weak JWT Secret",
+  "category": "SAST",
+  "location": "app.py:/jwt",
+  "cwe": "CWE-321"
+},
+"V28": {
+  "name": "Outdated Django Dependency",
+  "category": "SCA",
+  "location": "requirements.txt",
+  "cwe": "CWE-1104"
+},
+"V29": {
+  "name": "Outdated PyYAML Dependency",
+  "category": "SCA",
+  "location": "requirements.txt",
+  "cwe": "CWE-1104"
+},
+"V30": {
+  "name": "Outdated Jinja2 Dependency",
+  "category": "SCA",
+  "location": "requirements.txt",
+  "cwe": "CWE-1104"
+},
+"V31": {
+  "name": "World-Writable Application Directory",
+  "category": "Container",
+  "location": "Dockerfile",
+  "cwe": "CWE-732"
+},
+"V32": {
+  "name": "Unnecessary Network Utilities in Image",
+  "category": "Container",
+  "location": "Dockerfile",
+  "cwe": "CWE-1104"
+},
+"V33": {
+  "name": "Secret Stored in Container Environment Variable",
+  "category": "Secrets",
+  "location": "Dockerfile",
+  "cwe": "CWE-798"
 }
 }
 }
