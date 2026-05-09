@@ -390,7 +390,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-report
-          path: zap-report.json
+          path: |
+            zap-report.json
+            ./**/*.json
 
       - name: End ZAP timer
         id: zap-end
@@ -557,7 +559,7 @@ jobs:
           find artifacts/ -name "trivy-report.json" -exec cp {} . \;
           find artifacts/ -name "trivy-image.json" -exec cp {} . \;
           find artifacts/ -name "grype-report.json" -exec cp {} . \;
-          find artifacts/ -name "zap-report.json" -exec cp {} . \;
+          find artifacts/ -name "*zap*.json" -exec cp {} zap-report.json \;
           ls -la
 
       - name: Setup Python
