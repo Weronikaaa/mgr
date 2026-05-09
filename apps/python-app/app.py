@@ -47,11 +47,22 @@ def after_request(response):
 def home():
     return """
     <h1>Vulnerable Flask App</h1>
+
     <ul>
-        <li><a href="/search?q=test">Search</a></li>
-        <li><a href="/redirect?url=http://evil.com">Redirect</a></li>
-        <li><a href="/cookie">Cookie</a></li>
-        <li><a href="/debug">Debug</a></li>
+        <li><a href="/search?q=test">XSS</a></li>
+        <li><a href="/redirect?url=http://evil.com">Open Redirect</a></li>
+        <li><a href="/cookie">Insecure Cookie</a></li>
+        <li><a href="/debug">Debug Info Leak</a></li>
+
+        <li><a href="/user?username=admin">SQL Injection</a></li>
+        <li><a href="/ping?host=127.0.0.1">Command Injection</a></li>
+        <li><a href="/calc?expr=2+2">Eval Injection</a></li>
+        <li><a href="/file?file=test.txt">Path Traversal</a></li>
+
+        <li><a href="/admin">Broken Auth</a></li>
+        <li><a href="/token">Weak Token</a></li>
+        <li><a href="/fetch?url=http://example.com">SSRF</a></li>
+        <li><a href="/jwt">Weak JWT</a></li>
     </ul>
     """
 
@@ -197,6 +208,7 @@ def unsafe_yaml():
     import yaml
     data = request.data
     return str(yaml.load(data, Loader=yaml.Loader))
+
 
 
 
