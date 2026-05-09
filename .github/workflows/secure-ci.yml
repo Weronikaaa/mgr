@@ -362,6 +362,18 @@ jobs:
         id: zap-start
         run: echo "time=$(date +%s%N)" >> $GITHUB_OUTPUT
 
+      - name: Wait for Render deployment
+        run: |
+          for i in {1..20}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://mgr.onrender.com/)
+            echo "Attempt $i: $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
+
       - name: Run OWASP ZAP full scan
         run: |
           docker run --rm \
@@ -369,7 +381,8 @@ jobs:
             ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py \
             -t https://mgr.onrender.com \
             -J zap-report.json \
-            -m 5 || true
+            -m 5 \
+            -a || true
 
       - name: Debug ZAP files
         run: |
