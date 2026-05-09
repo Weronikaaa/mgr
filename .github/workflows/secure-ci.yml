@@ -24,6 +24,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Print repo tree
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tree
+        tree -L 3
       - name: Start build timer
         run: echo "BUILD_START=$(date +%s%N)" >> $GITHUB_ENV
       - name: Debug repo structure
