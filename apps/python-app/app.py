@@ -49,11 +49,9 @@ def home():
     <h1>Vulnerable Flask App</h1>
     <ul>
         <li><a href="/search?q=test">Search</a></li>
-        <li><a href="/search?q=<script>alert(1)</script>">XSS test</a></li>
-        <li><a href="/redirect?url=http://evil.com">Open redirect test</a></li>
-        <li><a href="/cookie">Insecure cookie test</a></li>
-        <li><a href="/admin">Admin panel</a></li>
-        <li><a href="/debug">Debug endpoint</a></li>
+        <li><a href="/redirect?url=http://evil.com">Redirect</a></li>
+        <li><a href="/cookie">Cookie</a></li>
+        <li><a href="/debug">Debug</a></li>
     </ul>
     """
 
