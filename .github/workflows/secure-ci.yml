@@ -379,9 +379,11 @@ jobs:
             -J zap-report.json \
             -m 5 || true
 
-      - name: Debug ZAP report
+      - name: Debug ZAP files
         run: |
-          echo "=== ZAP report ==="
+          echo "=== FILES ==="
+          ls -la
+          echo "=== ZAP REPORT ==="
           cat zap-report.json || true
 
       - name: Upload ZAP report
