@@ -48,13 +48,12 @@ def home():
     return """
     <h1>Vulnerable Flask App</h1>
     <ul>
-        <li>/user?username=admin</li>
-        <li>/ping?host=127.0.0.1</li>
-        <li>/calc?expr=2+2</li>
-        <li>/search?q=test</li>
-        <li>/redirect?url=http://example.com</li>
-        <li>/file?file=test.txt</li>
-        <li>/admin</li>
+        <li><a href="/search?q=test">Search</a></li>
+        <li><a href="/search?q=<script>alert(1)</script>">XSS test</a></li>
+        <li><a href="/redirect?url=http://evil.com">Open redirect test</a></li>
+        <li><a href="/cookie">Insecure cookie test</a></li>
+        <li><a href="/admin">Admin panel</a></li>
+        <li><a href="/debug">Debug endpoint</a></li>
     </ul>
     """
 
