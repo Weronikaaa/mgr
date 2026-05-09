@@ -321,36 +321,6 @@ def parse_grype():
 
     return findings
     
-# =========================================
-
-# ZAP
-
-# =========================================
-
-def parse_zap():
-
-    path = "zap-report.json"
-
-    if not os.path.exists(path):
-        print("ZAP report not found")
-        return set()
-
-    data = load_json(path)
-    raw = json.dumps(data).lower()
-
-    findings = set()
-
-    if "cross site scripting" in raw or "xss" in raw:
-        findings.add("V22")
-
-    if "external redirect" in raw or "open redirect" in raw or "redirect" in raw:
-        findings.add("V23")
-
-    if "cookie no httponly flag" in raw or "cookie without secure flag" in raw or "secure flag" in raw:
-        findings.add("V24")
-
-    return findings
-
 
 # =========================================
 
@@ -389,15 +359,7 @@ TOOLS = {
     "parser": parse_grype,
     "category": "SCA_CONTAINER",
     "expected": {"V15", "V16", "V17", "V18", "V19", "V20"}
-},
-
-"zap": {
-    "parser": parse_zap,
-    "category": "DAST",
-    "expected": {"V22", "V23", "V24"}
 }
-
-
 }
 
 # =========================================
