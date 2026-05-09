@@ -346,7 +346,7 @@ def parse_zap():
     if "external redirect" in raw or "open redirect" in raw or "redirect" in raw:
         findings.add("V23")
 
-    if "cookie no httponly flag" in raw or "cookie without secure flag" in raw or "httponly" in raw:
+    if "cookie no httponly flag" in raw or "cookie without secure flag" in raw or "secure flag" in raw:
         findings.add("V24")
 
     return findings
@@ -393,7 +393,8 @@ TOOLS = {
 
 "zap": {
     "parser": parse_zap,
-    "category": "DAST"
+    "category": "DAST",
+    "expected": {"V22", "V23", "V24"}
 }
 
 
