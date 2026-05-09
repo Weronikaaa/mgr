@@ -353,8 +353,6 @@ jobs:
 # ================= SMOKE TESTS =================
   smoke-tests:
     runs-on: ubuntu-latest
-    needs: dast-zap
-
     steps:
       - uses: actions/checkout@v4
 
@@ -366,7 +364,7 @@ jobs:
 # ================= METRICS =================
   metrics:
     runs-on: ubuntu-latest
-    needs: [sast-bandit, sast-sonarqube, sast-semgrep, gitleaks, trufflehog, sca-trivy, grype, container-scan, dast-zap, smoke-tests]
+    needs: [sast-bandit, sast-sonarqube, sast-semgrep, gitleaks, trufflehog, sca-trivy, grype, container-scan, smoke-tests]
   
     steps:
       - uses: actions/checkout@v4
