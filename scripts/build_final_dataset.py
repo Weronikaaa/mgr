@@ -338,18 +338,15 @@ def parse_zap():
     data = load_json(path)
     raw = json.dumps(data).lower()
 
-    print("ZAP report length:", len(raw))
-    print("ZAP report preview:", raw[:3000])
-
     findings = set()
 
     if "cross site scripting" in raw or "xss" in raw:
         findings.add("V22")
 
-    if "redirect" in raw:
+    if "external redirect" in raw or "open redirect" in raw or "redirect" in raw:
         findings.add("V23")
 
-    if "cookie" in raw or "httponly" in raw or "secure flag" in raw:
+    if "cookie no httponly flag" in raw or "cookie without secure flag" in raw or "httponly" in raw:
         findings.add("V24")
 
     return findings
