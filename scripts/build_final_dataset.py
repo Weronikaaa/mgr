@@ -64,16 +64,13 @@ CWE_MAP = {
     "CWE-200": "V12",
     "CWE-330": "V13",
     "CWE-489": "V14",
-    "CWE-1104": "V15",
     "CWE-250": "V17",
     "CWE-693": "V18",
     "CWE-494": "V19",
-    "CWE-16": "V20",
-    "CWE-306": "V21",
-    "CWE-614": "V24",
-    "CWE-918": "V25",
-    "CWE-321": "V27",
-    "CWE-732": "V31"
+    "CWE-614": "V20",
+    "CWE-918": "V21",
+    "CWE-321": "V23",
+    "CWE-732": "V27"
 }
 
 # =========================================
@@ -215,7 +212,7 @@ def parse_gitleaks():
         findings.add("V01")
 
     if "dockerfile" in raw or "aws_secret_access_key" in raw or "api_token" in raw:
-        findings.add("V33")
+        findings.add("V29")
 
     return findings
 
@@ -250,7 +247,7 @@ def parse_trufflehog():
         findings.add("V01")
 
     if "dockerfile" in raw or "aws_secret_access_key" in raw or "api_token" in raw:
-        findings.add("V33")
+        findings.add("V29")
 
     return findings
 
@@ -284,6 +281,15 @@ def parse_trivy_fs():
             if pkg == "requests":
                 findings.add("V16")
 
+            if pkg == "django":
+                findings.add("V24")
+            
+            if pkg == "pyyaml":
+                findings.add("V25")
+            
+            if pkg == "jinja2":
+                findings.add("V26")
+
     return findings
 
 
@@ -301,22 +307,12 @@ def parse_grype():
         return set()
 
     data = load_json(path)
+    raw = json.dumps(data).lower()
 
     findings = set()
 
-    for match in data.get("matches", []):
-
-        artifact = match.get("artifact", {})
-        name = artifact.get("name", "").lower()
-
-        if name == "flask":
-            findings.add("V15")
-
-        if name == "requests":
-            findings.add("V16")
-
-        if "python" in name:
-            findings.add("V18")
+    if "python" in raw:
+        findings.add("V18")
 
     return findings
     
@@ -351,13 +347,14 @@ TOOLS = {
 
 "trivy_fs": {
     "parser": parse_trivy_fs,
-    "category": "SCA"
+    "category": "SCA",
+    "expected": {"V15", "V16", "V24", "V25", "V26"}
 },
 
 "grype": {
     "parser": parse_grype,
     "category": "SCA_CONTAINER",
-    "expected": {"V15", "V16", "V17", "V18", "V19", "V20"}
+    "expected": {"V17", "V18", "V19", "V27", "V28", "V29"}
 }
 }
 
