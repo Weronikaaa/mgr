@@ -63,6 +63,13 @@ def home():
         <li><a href="/token">Weak Token</a></li>
         <li><a href="/fetch?url=http://example.com">SSRF</a></li>
         <li><a href="/jwt">Weak JWT</a></li>
+
+        <li><a href="/hash?password=test">Weak Hash</a></li>
+        <li><a href="/metrics">Prometheus Metrics</a></li>
+
+        <li>POST /upload - Insecure File Upload</li>
+        <li>POST /yaml - Unsafe YAML Deserialization</li>
+        <li>POST /load - Unsafe Pickle Deserialization</li>
     </ul>
     """
 
@@ -219,6 +226,8 @@ def unsafe_yaml():
 def weak_jwt():
     import jwt
     token = jwt.encode({"user": "admin"}, "secret", algorithm="HS256")
+    if isinstance(token, bytes):
+        token = token.decode("utf-8")
     return token
     
 # =========================
