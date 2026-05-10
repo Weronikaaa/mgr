@@ -26,10 +26,10 @@ jobs:
     steps:
       - name: Start build timer
         run: echo "BUILD_START=$(date +%s%N)" >> $GITHUB_ENV
+        
       - name: Debug repo structure
         run: ls -R
-      - name: Start build timer
-        run: echo "BUILD_START=$(date +%s)" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -276,7 +276,7 @@ jobs:
 # ================= DEPLOY =================
   deploy:
     runs-on: ubuntu-latest
-    needs: [container-scan]
+    needs: [sast-bandit, sast-semgrep, gitleaks, trufflehog, sca-trivy, grype, container-scan]
     if: github.ref == 'refs/heads/main'
 
     steps:
@@ -291,6 +291,7 @@ jobs:
 # ================= SMOKE TESTS =================
   smoke-tests:
     runs-on: ubuntu-latest
+    needs: deploy
     steps:
       - uses: actions/checkout@v4
 
@@ -354,7 +355,6 @@ jobs:
           find artifacts/ -name "gitleaks*.json" -exec cp {} metrics/ \;
           find artifacts/ -name "trufflehog*.json" -exec cp {} metrics/ \;
           find artifacts/ -name "grype*.json" -exec cp {} metrics/ \;
-          find artifacts/ -name "zap-report.json" -exec cp {} metrics/ \;
           
           echo "=== Files in metrics/ ==="
           ls -la metrics/
@@ -398,13 +398,11 @@ jobs:
         run: |
           find artifacts/ -name "bandit-report.json" -exec cp {} . \;
           find artifacts/ -name "semgrep-report.json" -exec cp {} . \;
-          find artifacts/ -name "sonarqube-metrics.json" -exec cp {} . \;
           find artifacts/ -name "gitleaks-report.json" -exec cp {} . \;
           find artifacts/ -name "trufflehog-report.json" -exec cp {} . \;
           find artifacts/ -name "trivy-report.json" -exec cp {} . \;
           find artifacts/ -name "trivy-image.json" -exec cp {} . \;
           find artifacts/ -name "grype-report.json" -exec cp {} . \;
-          find artifacts/ -name "*zap*.json" -exec cp {} zap-report.json \;
           ls -la
 
       - name: Setup Python
