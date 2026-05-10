@@ -1,0 +1,85 @@
+{
+  "bandit": {
+    "vulnerabilities": 16,
+    "high": 3,
+    "medium": 7,
+    "low": 6
+  },
+  "semgrep": {
+    "vulnerabilities": 28,
+    "critical": 15,
+    "high": 13,
+    "medium": 0,
+    "low": 0
+  },
+  "sonarqube": {
+    "vulnerabilities": 0,
+    "bugs": 0,
+    "code_smells": 0,
+    "coverage": 0,
+    "security_hotspots": 0
+  },
+  "gitleaks": {
+    "total_leaks": 5,
+    "secrets": [
+      {
+        "file": "apps/python-app/.env",
+        "line": 1,
+        "description": "AWS"
+      },
+      {
+        "file": "apps/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "mgr/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      },
+      {
+        "file": "mgr/python-app/app.py",
+        "line": 22,
+        "description": "Generic API Key"
+      }
+    ]
+  },
+  "trufflehog": {
+    "total_secrets": 1,
+    "detectors": [
+      "Github"
+    ],
+    "critical": 0,
+    "high": 0,
+    "medium": 1
+  },
+  "trivy_fs": {
+    "CRITICAL": 9,
+    "HIGH": 24,
+    "MEDIUM": 24,
+    "LOW": 2,
+    "total": 59
+  },
+  "trivy_container": {
+    "CRITICAL": 200,
+    "HIGH": 1667,
+    "MEDIUM": 3560,
+    "LOW": 1134,
+    "total": 6561
+  },
+  "grype": {
+    "CRITICAL": 207,
+    "HIGH": 794,
+    "MEDIUM": 842,
+    "LOW": 1080,
+    "total": 2923
+  },
+  "timestamp": "2026-05-10T11:23:10.004412",
+  "run_id": "25627373212",
+  "branch": "main"
+}
