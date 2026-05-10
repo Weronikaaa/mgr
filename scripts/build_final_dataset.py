@@ -7,7 +7,7 @@ from datetime import datetime
 GROUND_TRUTH_FILE = "data/ground_truth.json"
 
 # =========================================
-# HIHI
+# HEHE
 # LOAD JSON
 
 # =========================================
