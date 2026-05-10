@@ -410,6 +410,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Debug build_final_dataset.py
+        run: |
+          grep -n "V33\|V31\|V24\|parse_grype\|flask\|requests" scripts/build_final_dataset.py
+
       - name: Build final dataset
         run: python scripts/build_final_dataset.py
 
